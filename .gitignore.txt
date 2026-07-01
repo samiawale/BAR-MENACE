@@ -1,1 +1,7 @@
+
+# Visual Studio temporäre Dateien
 .vs/
+*.user
+*.suo
+bin/
+obj/

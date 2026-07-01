@@ -54,3 +54,4 @@ C:\Users\samia\Desktop\OVGU\3D-Game\Bar_Menace\Bar_Menace\obj\Debug\net8.0-windo
 C:\Users\samia\Desktop\OVGU\3D-Game\Bar_Menace\Bar_Menace\obj\Debug\net8.0-windows\Bar_Menace.genruntimeconfig.cache
 C:\Users\samia\Desktop\OVGU\3D-Game\Bar_Menace\Bar_Menace\obj\Debug\net8.0-windows\ref\Bar_Menace.dll
 C:\Users\samia\Desktop\OVGU\3D-Game\Bar_Menace\Bar_Menace\bin\Debug\net8.0-windows\Content\player_sprite.xnb
+C:\Users\samia\Desktop\OVGU\3D-Game\Bar_Menace\Bar_Menace\bin\Debug\net8.0-windows\Content\dummy_sprite.xnb

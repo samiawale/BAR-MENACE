@@ -15,8 +15,6 @@ namespace Bar_Menace.Entities
         public bool IsGrounded = false, IsFacingRight = true, IsSlamming = false;
         public bool IsCarryingDummy = false, IsAttacking = false, IsStabbing = false;
         public bool IsHurt = false, IsKnockedDown = false, IsPickingUp = false;
-
-        // NEU: Damit der Spieler weiß, wann er die Trage-Pose für Waffen machen soll!
         public bool IsCarryingHeavy = false;
 
         public bool JustLandedSlam = false;
@@ -51,7 +49,14 @@ namespace Bar_Menace.Entities
 
         public void TriggerThrow()
         {
-            ThrowTimer = 0.25f;
+            ThrowTimer = 0.35f;
+            currentFrame = 0;
+            frameTimer = 0f;
+        }
+
+        // NEW: Fixes the punch flicker by starting it perfectly at frame 0
+        public void TriggerAttack()
+        {
             currentFrame = 0;
             frameTimer = 0f;
         }
@@ -188,7 +193,15 @@ namespace Bar_Menace.Entities
             frameTimer += dt;
             if (frameTimer >= FrameInterval)
             {
-                currentFrame = (currentFrame + 1) % 3;
+                // NEW: If attacking, freeze on the last frame (frame 2) so it doesn't loop and flicker!
+                if ((IsAttacking || IsStabbing || ThrowTimer > 0) && currentFrame == 2)
+                {
+                    // Do nothing, hold the punch pose
+                }
+                else
+                {
+                    currentFrame = (currentFrame + 1) % 3;
+                }
                 frameTimer = 0f;
             }
         }
@@ -202,25 +215,16 @@ namespace Bar_Menace.Entities
             else if (IsHurt) row = 9;
             else if (IsPickingUp) row = 8;
             else if (IsStabbing || ThrowTimer > 0) row = 11;
-            else if (IsSlamming)
-            {
-                row = 4;
-                drawFrame = 0;
-            }
+            else if (IsSlamming) { row = 4; drawFrame = 0; }
             else if (IsAttacking) row = 3;
-            // NEU: Reagiert jetzt auch auf schwere Waffen!
             else if (IsCarryingDummy || IsCarryingHeavy)
             {
                 row = 5;
-                if (IsGrounded && Math.Abs(Velocity.X) < 1f)
-                {
-                    drawFrame = 0;
-                }
+                if (IsGrounded && Math.Abs(Velocity.X) < 1f) drawFrame = 0;
             }
             else if (!IsGrounded)
             {
-                row = 2;
-                drawFrame = Velocity.Y < 0 ? 0 : 1;
+                row = 2; drawFrame = Velocity.Y < 0 ? 0 : 1;
             }
             else if (Math.Abs(Velocity.X) > 0) row = 1;
             else row = 0;

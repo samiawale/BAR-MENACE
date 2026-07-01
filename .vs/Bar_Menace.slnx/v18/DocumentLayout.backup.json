@@ -3,6 +3,10 @@
   "WorkspaceRootPath": "C:\\Users\\samia\\Desktop\\OVGU\\3D-Game\\Bar_Menace\\Bar_Menace\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{61856B8F-C0BF-3F56-019F-4EF385355535}|Bar_Menace.csproj|c:\\users\\samia\\desktop\\ovgu\\3d-game\\bar_menace\\bar_menace\\entities\\dummy.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{61856B8F-C0BF-3F56-019F-4EF385355535}|Bar_Menace.csproj|solutionrelative:entities\\dummy.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{61856B8F-C0BF-3F56-019F-4EF385355535}|Bar_Menace.csproj|c:\\users\\samia\\desktop\\ovgu\\3d-game\\bar_menace\\bar_menace\\entities\\player.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{61856B8F-C0BF-3F56-019F-4EF385355535}|Bar_Menace.csproj|solutionrelative:entities\\player.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -11,12 +15,12 @@
       "RelativeMoniker": "D:0:0:{61856B8F-C0BF-3F56-019F-4EF385355535}|Bar_Menace.csproj|solutionrelative:game1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{61856B8F-C0BF-3F56-019F-4EF385355535}|Bar_Menace.csproj|c:\\users\\samia\\desktop\\ovgu\\3d-game\\bar_menace\\bar_menace\\entities\\weaponmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{61856B8F-C0BF-3F56-019F-4EF385355535}|Bar_Menace.csproj|solutionrelative:entities\\weaponmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{61856B8F-C0BF-3F56-019F-4EF385355535}|Bar_Menace.csproj|c:\\users\\samia\\desktop\\ovgu\\3d-game\\bar_menace\\bar_menace\\content\\player_sprite.png||{58961B49-13E0-48C0-9258-13CBC4D40279}",
+      "RelativeMoniker": "D:0:0:{61856B8F-C0BF-3F56-019F-4EF385355535}|Bar_Menace.csproj|solutionrelative:content\\player_sprite.png||{58961B49-13E0-48C0-9258-13CBC4D40279}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{61856B8F-C0BF-3F56-019F-4EF385355535}|Bar_Menace.csproj|c:\\users\\samia\\desktop\\ovgu\\3d-game\\bar_menace\\bar_menace\\entities\\dummy.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{61856B8F-C0BF-3F56-019F-4EF385355535}|Bar_Menace.csproj|solutionrelative:entities\\dummy.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{61856B8F-C0BF-3F56-019F-4EF385355535}|Bar_Menace.csproj|c:\\users\\samia\\desktop\\ovgu\\3d-game\\bar_menace\\bar_menace\\entities\\weaponmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{61856B8F-C0BF-3F56-019F-4EF385355535}|Bar_Menace.csproj|solutionrelative:entities\\weaponmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{61856B8F-C0BF-3F56-019F-4EF385355535}|Bar_Menace.csproj|c:\\users\\samia\\desktop\\ovgu\\3d-game\\bar_menace\\bar_menace\\entities\\weaponitem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -37,8 +41,24 @@
           "SelectedChildIndex": 4,
           "Children": [
             {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{75188d03-9892-4ae2-abf1-207126247ce5}"
+            },
+            {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
+              "Title": "player_sprite.png",
+              "DocumentMoniker": "C:\\Users\\samia\\Desktop\\OVGU\\3D-Game\\Bar_Menace\\Bar_Menace\\Content\\player_sprite.png",
+              "RelativeDocumentMoniker": "Content\\player_sprite.png",
+              "ToolTip": "C:\\Users\\samia\\Desktop\\OVGU\\3D-Game\\Bar_Menace\\Bar_Menace\\Content\\player_sprite.png",
+              "RelativeToolTip": "Content\\player_sprite.png",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001533|",
+              "WhenOpened": "2026-07-01T18:57:54.655Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
               "Title": "WeaponManager.cs",
               "DocumentMoniker": "C:\\Users\\samia\\Desktop\\OVGU\\3D-Game\\Bar_Menace\\Bar_Menace\\Entities\\WeaponManager.cs",
               "RelativeDocumentMoniker": "Entities\\WeaponManager.cs",
@@ -46,12 +66,11 @@
               "RelativeToolTip": "Entities\\WeaponManager.cs",
               "ViewState": "AgIAAOEAAAAAAAAAAAAwwAUBAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-30T18:01:30.111Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-06-30T18:01:30.111Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 6,
               "Title": "Level.cs",
               "DocumentMoniker": "C:\\Users\\samia\\Desktop\\OVGU\\3D-Game\\Bar_Menace\\Bar_Menace\\Enviroment\\Level.cs",
               "RelativeDocumentMoniker": "Enviroment\\Level.cs",
@@ -59,25 +78,24 @@
               "RelativeToolTip": "Enviroment\\Level.cs",
               "ViewState": "AgIAAAoAAAAAAAAAAAAQwCsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-30T17:59:01.222Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-06-30T17:59:01.222Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 0,
               "Title": "Dummy.cs",
               "DocumentMoniker": "C:\\Users\\samia\\Desktop\\OVGU\\3D-Game\\Bar_Menace\\Bar_Menace\\Entities\\Dummy.cs",
               "RelativeDocumentMoniker": "Entities\\Dummy.cs",
               "ToolTip": "C:\\Users\\samia\\Desktop\\OVGU\\3D-Game\\Bar_Menace\\Bar_Menace\\Entities\\Dummy.cs",
               "RelativeToolTip": "Entities\\Dummy.cs",
-              "ViewState": "AgIAAFQAAAAAAAAAAAAwwHgAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAE4AAAAAAAAAAAAqwJAAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-06-30T17:23:31.368Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "WeaponItem.cs",
               "DocumentMoniker": "C:\\Users\\samia\\Desktop\\OVGU\\3D-Game\\Bar_Menace\\Bar_Menace\\Entities\\WeaponItem.cs",
               "RelativeDocumentMoniker": "Entities\\WeaponItem.cs",
@@ -85,31 +103,30 @@
               "RelativeToolTip": "Entities\\WeaponItem.cs",
               "ViewState": "AgIAAA4AAAAAAAAAAAA0wCQAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-30T17:22:54.166Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-06-30T17:22:54.166Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "Player.cs",
               "DocumentMoniker": "C:\\Users\\samia\\Desktop\\OVGU\\3D-Game\\Bar_Menace\\Bar_Menace\\Entities\\Player.cs",
               "RelativeDocumentMoniker": "Entities\\Player.cs",
               "ToolTip": "C:\\Users\\samia\\Desktop\\OVGU\\3D-Game\\Bar_Menace\\Bar_Menace\\Entities\\Player.cs",
               "RelativeToolTip": "Entities\\Player.cs",
-              "ViewState": "AgIAAMkAAAAAAAAAAAAQwOoAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAM0AAAAAAAAAAAAqwO4AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-06-30T17:19:59.418Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "Game1.cs",
               "DocumentMoniker": "C:\\Users\\samia\\Desktop\\OVGU\\3D-Game\\Bar_Menace\\Bar_Menace\\Game1.cs",
               "RelativeDocumentMoniker": "Game1.cs",
               "ToolTip": "C:\\Users\\samia\\Desktop\\OVGU\\3D-Game\\Bar_Menace\\Bar_Menace\\Game1.cs",
               "RelativeToolTip": "Game1.cs",
-              "ViewState": "AgIAAC8BAAAAAAAAAAAwwFMBAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAOIAAAAAAAAAAAAAAAMBAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-06-30T16:57:10.863Z",
               "EditorCaption": ""

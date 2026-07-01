@@ -4,9 +4,11 @@
   <Platform>Windows</Platform>
   <Config />
   <SourceFiles>
+    <File>C:/Users/samia/Desktop/OVGU/3D-Game/Bar_Menace/Bar_Menace/Content/Dummy_sprite.png</File>
     <File>C:/Users/samia/Desktop/OVGU/3D-Game/Bar_Menace/Bar_Menace/Content/player_sprite.png</File>
   </SourceFiles>
   <DestFiles>
+    <File xsi:nil="true" />
     <File xsi:nil="true" />
   </DestFiles>
 </SourceFileCollection>

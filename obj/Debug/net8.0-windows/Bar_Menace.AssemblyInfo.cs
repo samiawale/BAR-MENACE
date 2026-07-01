@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Bar_Menace")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a2ff9d7df43397f59a33e7d5fe27b28700db7f43")]
 [assembly: System.Reflection.AssemblyProductAttribute("Bar_Menace")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Bar_Menace")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

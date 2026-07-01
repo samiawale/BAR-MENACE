@@ -2,90 +2,39 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
-using System.Collections.Generic;
+using Bar_Menace.Entities;
+using Bar_Menace.Environment;
 
 namespace Bar_Menace
 {
-    // --- WEAPON ENUMS & STRUCTURE -----
-    public enum WeaponType { Bottle, BilliardCue, Barstool }
-    public enum WeaponState { OnGround, Held, Thrown, Respawning }
-
-    public struct WeaponItem
-    {
-        public WeaponType Type;
-        public WeaponState State;
-        public Vector2 Position;
-        public Vector2 Velocity;
-        public Rectangle BoundingBox;
-        public Vector2 SpawnPoint;
-        public int MaxDurability;
-        public int CurrentDurability;
-        public float CooldownTimer;
-        public Color DebugColor;
-    }
-
     public class Game1 : Game
     {
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
+        private Texture2D _pixelTexture;
+        private Texture2D _playerSprite;
 
-        // --- PLAYER MOVEMENT VARIABLES ---
-        Vector2 playerPosition;
-        Vector2 playerVelocity;
-        const float MoveSpeed = 350f;
-        const float Gravity = 1400f;
-        const float JumpForce = -580f;
-        bool isGrounded = false;
-        bool isFacingRight = true;
+        private Player _player;
+        private Dummy _dummy;
+        private Level _level;
+        private WeaponManager _weaponManager;
 
-        // --- DOUBLE JUMP & INPUT TRACKING VARIABLES ---
-        int jumpCount = 0;
-        const int MaxJumps = 2;
-        KeyboardState oldKeyboardState;
+        private KeyboardState _oldKeyboardState;
+        private Random _random;
 
-        // --- PLAYER RETRO BOX PLACEHOLDER ---
-        Texture2D pixelTexture;
-        Rectangle playerBounds;
-        const int PlayerWidth = 32;
-        const int PlayerHeight = 64;
+        private bool _isSwinging = false;
+        private bool _isPunching = false;
+        private float _swingTimer = 0f;
 
-        // --- PLATFORM LAYOUT VARIABLES ---
-        List<Rectangle> barPlatforms;
+        private float _currentSwingDuration = 0.15f;
+        private int _currentSwingReach = 50;
+        private int _currentStrikeDamage = 0;
 
-        // --- WEAPON MANAGER VARIABLES ----
-        List<WeaponItem> weaponsList;
-        const float RespawnDelay = 10f;
-        int heldWeaponIndex = -1;
-        const float ThrowSpeedX = 800f;
-        const float ThrowSpeedY = -200f;
+        private Rectangle _attackHitbox;
 
-        // --- COMBAT & GROUND SLAM VARIABLES --
-        bool isSlamming = false;
-        const float SlamSpeed = 1200f;
-
-        bool isSwinging = false;
-        float swingTimer = 0f;
-        const float MaxSwingTime = 0.15f;
-        Rectangle attackHitbox;
-
-        // --- UNARMED PUNCH ARCHETYPE -------
-        bool isPunching = false;
-        Color attackBoxColor = Color.Orange;
-
-        // --- PRACTICE AI DUMMY VARIABLES -----
-        Vector2 dummyPosition;
-        Vector2 dummyVelocity;
-        Rectangle dummyBounds;
-        bool dummyGrounded = false;
-        const int DummyWidth = 32;
-        const int DummyHeight = 64;
-        float dummyHitStunTimer = 0f;
-        bool isDummyHit = false;
-
-        // --- VISUAL SCREEN SHAKE ---
-        float shakeDuration = 0f;
-        float shakeIntensity = 0f;
-        Vector2 cameraOffset = Vector2.Zero;
+        private float _shakeDuration = 0f;
+        private float _shakeIntensity = 0f;
+        private Vector2 _cameraOffset = Vector2.Zero;
 
         public Game1()
         {
@@ -99,416 +48,277 @@ namespace Bar_Menace
             _graphics.PreferredBackBufferWidth = 1280;
             _graphics.PreferredBackBufferHeight = 720;
             _graphics.ApplyChanges();
-
             base.Initialize();
         }
 
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
+            _pixelTexture = new Texture2D(GraphicsDevice, 1, 1);
+            _pixelTexture.SetData(new[] { Color.White });
+            _playerSprite = Content.Load<Texture2D>("player_sprite");
 
-            pixelTexture = new Texture2D(GraphicsDevice, 1, 1);
-            pixelTexture.SetData(new[] { Color.White });
+            _player = new Player(new Vector2(640, 200));
+            _dummy = new Dummy(new Vector2(900, 300));
+            _level = new Level();
+            _weaponManager = new WeaponManager();
 
-            playerPosition = new Vector2(640, 200);
-
-            dummyPosition = new Vector2(900, 300);
-            dummyVelocity = Vector2.Zero;
-
-            barPlatforms = new List<Rectangle>();
-            barPlatforms.Add(new Rectangle(150, 500, 300, 30));
-            barPlatforms.Add(new Rectangle(800, 500, 300, 30));
-            barPlatforms.Add(new Rectangle(440, 350, 400, 30));
-            barPlatforms.Add(new Rectangle(540, 200, 200, 25));
-
-            weaponsList = new List<WeaponItem>();
-            CreateWeapon(WeaponType.Bottle, new Vector2(280, 476), 1, Color.LimeGreen);
-            CreateWeapon(WeaponType.BilliardCue, new Vector2(940, 484), 3, Color.Tan);
-            CreateWeapon(WeaponType.Barstool, new Vector2(620, 318), 5, Color.OrangeRed);
-        }
-
-        private void CreateWeapon(WeaponType type, Vector2 pos, int durability, Color debugColor)
-        {
-            WeaponItem weapon = new WeaponItem();
-            weapon.Type = type;
-            weapon.State = WeaponState.OnGround;
-            weapon.Position = pos;
-            weapon.Velocity = Vector2.Zero;
-            weapon.SpawnPoint = pos;
-            weapon.MaxDurability = durability;
-            weapon.CurrentDurability = durability;
-            weapon.CooldownTimer = 0f;
-            weapon.DebugColor = debugColor;
-
-            int w = 24, h = 24;
-            if (type == WeaponType.BilliardCue) { w = 40; h = 16; }
-            if (type == WeaponType.Barstool) { w = 32; h = 32; }
-
-            weapon.BoundingBox = new Rectangle((int)pos.X, (int)pos.Y, w, h);
-            weaponsList.Add(weapon);
+            _random = new Random();
         }
 
         protected override void Update(GameTime gameTime)
         {
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
+            KeyboardState kState = Keyboard.GetState();
+            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || kState.IsKeyDown(Keys.Escape))
                 Exit();
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            KeyboardState kState = Keyboard.GetState();
+            int screenWidth = GraphicsDevice.Viewport.Width;
+            int screenHeight = GraphicsDevice.Viewport.Height;
 
-            // Movement Controls
-            playerVelocity.X = 0;
+            float weaponWeight = 1.0f;
+            _player.IsCarryingHeavy = false;
 
-            if (!isSlamming)
+            if (_weaponManager.HeldWeaponIndex != -1)
             {
-                if (kState.IsKeyDown(Keys.A))
-                {
-                    playerVelocity.X = -MoveSpeed;
-                    isFacingRight = false;
-                }
-                if (kState.IsKeyDown(Keys.D))
-                {
-                    playerVelocity.X = MoveSpeed;
-                    isFacingRight = true;
-                }
+                WeaponType heldType = _weaponManager.Weapons[_weaponManager.HeldWeaponIndex].Type;
+                if (heldType == WeaponType.BilliardCue) weaponWeight = 0.85f;
+                else if (heldType == WeaponType.Barstool) { weaponWeight = 0.65f; _player.IsCarryingHeavy = true; }
+                else if (heldType == WeaponType.Jukebox) { weaponWeight = 0.45f; _player.IsCarryingHeavy = true; }
             }
+            if (_player.IsCarryingDummy) weaponWeight = 0.5f;
 
-            // Gravity Engine
-            if (!isGrounded)
+            _player.Update(dt, kState, _oldKeyboardState, _level.Platforms, screenWidth, screenHeight, weaponWeight);
+
+            bool projectileTriggeredShake;
+            _weaponManager.Update(dt, kState, _oldKeyboardState, _player, _dummy, _level.Platforms, screenWidth, screenHeight, out projectileTriggeredShake);
+            if (projectileTriggeredShake) { _shakeDuration = 0.15f; _shakeIntensity = 5f; }
+
+            _dummy.Update(dt, screenWidth, screenHeight, _level.Platforms);
+
+            if (kState.IsKeyDown(Keys.E) && _oldKeyboardState.IsKeyUp(Keys.E) && !_player.IsSlamming)
             {
-                if (isSlamming) { playerVelocity.Y = SlamSpeed; }
-                else { playerVelocity.Y += Gravity * dt; }
-            }
-            else
-            {
-                // LANDING IMPACT CHECK (Slam Finisher)
-                if (isSlamming)
+                if (_weaponManager.HeldWeaponIndex == -1 && !_player.IsCarryingDummy)
                 {
-                    isSlamming = false;
-                    shakeDuration = 0.4f;
-                    shakeIntensity = 12f;
-
-                    if (Vector2.Distance(playerPosition, dummyPosition) < 200f)
+                    Rectangle pickupRange = new Rectangle(_player.Bounds.X - 50, _player.Bounds.Y - 20, _player.Bounds.Width + 100, _player.Bounds.Height + 40);
+                    if (pickupRange.Intersects(_dummy.Bounds))
                     {
-                        isDummyHit = true;
-                        dummyHitStunTimer = 0.25f;
-                        dummyVelocity = new Vector2(0f, -700f);
-                        dummyGrounded = false;
-                    }
-
-                    if (heldWeaponIndex != -1)
-                    {
-                        WeaponItem sw = weaponsList[heldWeaponIndex];
-                        sw.CurrentDurability = 0;
-                        sw.State = WeaponState.Respawning;
-                        sw.CooldownTimer = 0f;
-                        sw.Velocity = Vector2.Zero; // CRITICAL RESET
-
-                        sw.Position = new Vector2(-500, -500);
-                        sw.BoundingBox.X = -500;
-                        sw.BoundingBox.Y = -500;
-
-                        weaponsList[heldWeaponIndex] = sw;
-                        heldWeaponIndex = -1;
+                        _player.IsCarryingDummy = true;
                     }
                 }
-
-                playerVelocity.Y = 0;
-                jumpCount = 0;
-            }
-
-            // Jump Engine
-            if (kState.IsKeyDown(Keys.Space) && oldKeyboardState.IsKeyUp(Keys.Space) && !isSlamming)
-            {
-                if (isGrounded || jumpCount < MaxJumps)
+                else if (_player.IsCarryingDummy)
                 {
-                    playerVelocity.Y = JumpForce;
-                    jumpCount++;
-                    isGrounded = false;
+                    _player.IsCarryingDummy = false;
+                    _dummy.Position = new Vector2(_player.Position.X, _player.Position.Y);
                 }
             }
 
-            playerPosition += playerVelocity * dt;
-            isGrounded = false;
-
-            // Screen Floor Bounding (Player)
-            float floorY = GraphicsDevice.Viewport.Height - PlayerHeight;
-            if (playerPosition.Y >= floorY)
+            if (kState.IsKeyDown(Keys.Q) && _oldKeyboardState.IsKeyUp(Keys.Q) && _player.IsCarryingDummy && !_player.IsSlamming)
             {
-                playerPosition.Y = floorY;
-                isGrounded = true;
+                _player.IsCarryingDummy = false;
+                float directionMultiplier = _player.IsFacingRight ? 1f : -1f;
+                _dummy.Velocity = new Vector2(850f * directionMultiplier, -400f);
+                _player.TriggerThrow();
             }
 
-            // Platform Collisions Check (Player)
-            Rectangle upcomingBounds = new Rectangle((int)playerPosition.X, (int)playerPosition.Y, PlayerWidth, PlayerHeight);
-            foreach (Rectangle platform in barPlatforms)
+            if (_player.IsCarryingDummy)
             {
-                if (upcomingBounds.Intersects(platform))
-                {
-                    if (!isSlamming && playerVelocity.Y > 0 && (upcomingBounds.Bottom - playerVelocity.Y * dt) <= platform.Top + 12)
-                    {
-                        playerPosition.Y = platform.Top - PlayerHeight;
-                        isGrounded = true;
-                        playerVelocity.Y = 0;
-                    }
-                }
-            }
-            playerBounds = new Rectangle((int)playerPosition.X, (int)playerPosition.Y, PlayerWidth, PlayerHeight);
-
-            // PRACTICE DUMMY PHYSICS ENGINE
-            if (dummyGrounded) { dummyVelocity.X = MathHelper.Lerp(dummyVelocity.X, 0f, 8f * dt); }
-            else { dummyVelocity.X = MathHelper.Lerp(dummyVelocity.X, 0f, 2f * dt); }
-
-            if (!dummyGrounded) { dummyVelocity.Y += Gravity * dt; }
-            else { dummyVelocity.Y = 0; }
-
-            dummyPosition += dummyVelocity * dt;
-            dummyGrounded = false;
-
-            float dummyFloorY = GraphicsDevice.Viewport.Height - DummyHeight;
-            if (dummyPosition.Y >= dummyFloorY)
-            {
-                dummyPosition.Y = dummyFloorY;
-                dummyGrounded = true;
+                float offsetOffsetX = _player.IsFacingRight ? 30 : -30;
+                _dummy.Position.X = _player.Position.X + offsetOffsetX;
+                _dummy.Position.Y = _player.Position.Y - 40;
+                _dummy.Velocity = Vector2.Zero;
             }
 
-            Rectangle upcomingDummyBounds = new Rectangle((int)dummyPosition.X, (int)dummyPosition.Y, DummyWidth, DummyHeight);
-            foreach (Rectangle platform in barPlatforms)
+            // HIER IST DER MAGISCHE ORT: Der Body Slam Treffer!
+            if (_player.JustLandedSlam)
             {
-                if (upcomingDummyBounds.Intersects(platform))
+                if (_player.IsCarryingDummy)
                 {
-                    if (dummyVelocity.Y > 0 && (upcomingDummyBounds.Bottom - dummyVelocity.Y * dt) <= platform.Top + 12)
-                    {
-                        dummyPosition.Y = platform.Top - DummyHeight;
-                        dummyGrounded = true;
-                        dummyVelocity.Y = 0;
-                    }
-                }
-            }
-            dummyBounds = new Rectangle((int)dummyPosition.X, (int)dummyPosition.Y, DummyWidth, DummyHeight);
-
-            if (isDummyHit)
-            {
-                dummyHitStunTimer -= dt;
-                if (dummyHitStunTimer <= 0) { isDummyHit = false; }
-            }
-
-            // COMBAT ATTACK LOGIC (F) - WITH EXPLICIT ACCELERATION RESETS
-            if (kState.IsKeyDown(Keys.F) && oldKeyboardState.IsKeyUp(Keys.F))
-            {
-                bool strikeTriggered = false;
-                float forceX = 0f, forceY = 0f;
-
-                if (heldWeaponIndex != -1)
-                {
-                    WeaponItem currentWeapon = weaponsList[heldWeaponIndex];
-
-                    if (!isGrounded && currentWeapon.Type == WeaponType.Barstool)
-                    {
-                        isSlamming = true;
-                    }
-                    else if (!isSwinging)
-                    {
-                        isSwinging = true;
-                        isPunching = false;
-                        swingTimer = 0f;
-                        attackBoxColor = Color.Orange * 0.6f;
-
-                        int swingReach = 50;
-                        int attackX = isFacingRight ? playerBounds.Right : playerBounds.Left - swingReach;
-                        attackHitbox = new Rectangle(attackX, playerBounds.Y + 15, swingReach, 30);
-
-                        strikeTriggered = true;
-                        forceX = isFacingRight ? 550f : -550f;
-                        forceY = -150f;
-
-                        currentWeapon.CurrentDurability--;
-
-                        if (currentWeapon.CurrentDurability <= 0)
-                        {
-                            currentWeapon.State = WeaponState.Respawning;
-                            currentWeapon.CooldownTimer = 0f;
-                            currentWeapon.Velocity = Vector2.Zero; // CRITICAL FIX: Stops invisible descent bug
-
-                            currentWeapon.Position = new Vector2(-500, -500);
-                            currentWeapon.BoundingBox.X = -500;
-                            currentWeapon.BoundingBox.Y = -500;
-
-                            weaponsList[heldWeaponIndex] = currentWeapon;
-                            heldWeaponIndex = -1;
-                        }
-                        else
-                        {
-                            weaponsList[heldWeaponIndex] = currentWeapon;
-                        }
-                    }
-                }
-                else if (!isSwinging && !isPunching)
-                {
-                    isPunching = true;
-                    swingTimer = 0f;
-                    attackBoxColor = Color.SkyBlue * 0.7f;
-
-                    int punchReach = 30;
-                    int attackX = isFacingRight ? playerBounds.Right : playerBounds.Left - punchReach;
-                    attackHitbox = new Rectangle(attackX, playerBounds.Y + 20, punchReach, 20);
-
-                    strikeTriggered = true;
-                    forceX = isFacingRight ? 350f : -350f;
-                    forceY = -100f;
-                }
-
-                if (strikeTriggered && attackHitbox.Intersects(dummyBounds))
-                {
-                    isDummyHit = true;
-                    dummyHitStunTimer = 0.15f;
-                    dummyVelocity = new Vector2(forceX, forceY);
-                    dummyGrounded = false;
-                }
-            }
-
-            // Handle swing animations timers
-            if (isSwinging || isPunching)
-            {
-                swingTimer += dt;
-                int currentReach = isPunching ? 30 : 50;
-                int attackX = isFacingRight ? playerBounds.Right : playerBounds.Left - currentReach;
-                attackHitbox.X = attackX;
-                attackHitbox.Y = playerBounds.Y + 20;
-
-                float frameDuration = isPunching ? 0.10f : MaxSwingTime;
-                if (swingTimer >= frameDuration)
-                {
-                    isSwinging = false;
-                    isPunching = false;
-                }
-            }
-
-            // INTERACTION LOGIC (E KEY)
-            if (kState.IsKeyDown(Keys.E) && oldKeyboardState.IsKeyUp(Keys.E) && !isSlamming)
-            {
-                if (heldWeaponIndex == -1)
-                {
-                    for (int i = 0; i < weaponsList.Count; i++)
-                    {
-                        if (weaponsList[i].State == WeaponState.OnGround && playerBounds.Intersects(weaponsList[i].BoundingBox))
-                        {
-                            WeaponItem pickedWeapon = weaponsList[i];
-                            pickedWeapon.State = WeaponState.Held;
-                            weaponsList[i] = pickedWeapon;
-                            heldWeaponIndex = i;
-                            break;
-                        }
-                    }
+                    _shakeDuration = 0.6f;
+                    _shakeIntensity = 18f;
+                    _player.IsCarryingDummy = false;
+                    _dummy.Health -= 40;
+                    _dummy.ApplyHit(new Vector2(0f, -800f), 0.5f);
                 }
                 else
                 {
-                    WeaponItem droppedWeapon = weaponsList[heldWeaponIndex];
-                    droppedWeapon.State = WeaponState.OnGround;
-                    droppedWeapon.Velocity = Vector2.Zero;
-                    droppedWeapon.Position = new Vector2(playerPosition.X, playerPosition.Y + (PlayerHeight - droppedWeapon.BoundingBox.Height));
-                    droppedWeapon.BoundingBox.X = (int)droppedWeapon.Position.X;
-                    droppedWeapon.BoundingBox.Y = (int)droppedWeapon.Position.Y;
-                    weaponsList[heldWeaponIndex] = droppedWeapon;
-                    heldWeaponIndex = -1;
-                }
-            }
+                    Rectangle slamHitbox = new Rectangle(_player.Bounds.X - 100, _player.Bounds.Y, _player.Bounds.Width + 200, _player.Bounds.Height + 50);
 
-            // THROW ENGINE (Q KEY)
-            if (kState.IsKeyDown(Keys.Q) && oldKeyboardState.IsKeyUp(Keys.Q) && heldWeaponIndex != -1 && !isSlamming)
-            {
-                WeaponItem thrownWeapon = weaponsList[heldWeaponIndex];
-                thrownWeapon.State = WeaponState.Thrown;
-                float directionMultiplier = isFacingRight ? 1f : -1f;
-                thrownWeapon.Velocity = new Vector2(ThrowSpeedX * directionMultiplier, ThrowSpeedY);
-                weaponsList[heldWeaponIndex] = thrownWeapon;
-                heldWeaponIndex = -1;
-            }
-
-            // LOCK WEAPON TO HANDS POSITION
-            if (heldWeaponIndex != -1 && !isSlamming)
-            {
-                WeaponItem heldW = weaponsList[heldWeaponIndex];
-                float offsetOffsetX = isFacingRight ? 12 : -12;
-                heldW.Position.X = playerPosition.X + (PlayerWidth / 2) - (heldW.BoundingBox.Width / 2) + offsetOffsetX;
-                heldW.Position.Y = playerPosition.Y + (PlayerHeight / 2) - (heldW.BoundingBox.Height / 2);
-                heldW.BoundingBox.X = (int)heldW.Position.X;
-                heldW.BoundingBox.Y = (int)heldW.Position.Y;
-                weaponsList[heldWeaponIndex] = heldW;
-            }
-
-            // PROJECTILE & COOLDOWN RESPAWNS MANAGEMENT LOOP
-            for (int i = 0; i < weaponsList.Count; i++)
-            {
-                WeaponItem w = weaponsList[i];
-
-                if (w.State == WeaponState.Thrown)
-                {
-                    w.Velocity.Y += Gravity * dt;
-                    w.Position += w.Velocity * dt;
-                    w.BoundingBox.X = (int)w.Position.X;
-                    w.BoundingBox.Y = (int)w.Position.Y;
-
-                    bool hitFloor = w.Position.Y >= (GraphicsDevice.Viewport.Height - w.BoundingBox.Height);
-                    bool wentOffScreen = w.Position.X < -100 || w.Position.X > GraphicsDevice.Viewport.Width + 100;
-                    bool hitDummy = w.BoundingBox.Intersects(dummyBounds);
-
-                    if (hitFloor || wentOffScreen || hitDummy)
+                    bool hasBarstool = false;
+                    bool hasJukebox = false;
+                    if (_weaponManager.HeldWeaponIndex != -1)
                     {
-                        if (hitDummy)
+                        WeaponType t = _weaponManager.Weapons[_weaponManager.HeldWeaponIndex].Type;
+                        if (t == WeaponType.Barstool) hasBarstool = true;
+                        if (t == WeaponType.Jukebox) hasJukebox = true;
+                    }
+
+                    if (hasJukebox)
+                    {
+                        _shakeDuration = 0.6f;
+                        _shakeIntensity = 20f;
+                        if (slamHitbox.Intersects(_dummy.Bounds))
                         {
-                            isDummyHit = true;
-                            dummyHitStunTimer = 0.2f;
-                            float launchDirX = w.Velocity.X > 0 ? 650f : -650f;
-                            dummyVelocity = new Vector2(launchDirX, -250f);
-                            dummyGrounded = false;
+                            _dummy.Health -= 40;
+                            _dummy.ApplyHit(new Vector2(0f, -900f), 0.4f);
                         }
-
-                        w.CurrentDurability = 0;
-                        w.State = WeaponState.Respawning;
-                        w.CooldownTimer = 0f;
-                        w.Velocity = Vector2.Zero; // CLEAR PROJECTILE VELOCITY
-
-                        w.Position = new Vector2(-500, -500);
-                        w.BoundingBox.X = -500;
-                        w.BoundingBox.Y = -500;
-
-                        if (hitFloor || hitDummy) { shakeDuration = 0.15f; shakeIntensity = 5f; }
+                        // NEU: Egal wie neu die Jukebox war, sie zerbricht JETZT!
+                        _weaponManager.InstaBreakHeldWeapon();
                     }
-                    weaponsList[i] = w;
-                }
-                else if (w.State == WeaponState.Respawning)
-                {
-                    w.CooldownTimer += dt;
-                    if (w.CooldownTimer >= RespawnDelay)
+                    else if (hasBarstool)
                     {
-                        w.State = WeaponState.OnGround;
-                        w.CurrentDurability = w.MaxDurability;
-                        w.Position = w.SpawnPoint;
-                        w.Velocity = Vector2.Zero;
-                        w.CooldownTimer = 0f;
-                        w.BoundingBox.X = (int)w.SpawnPoint.X;
-                        w.BoundingBox.Y = (int)w.SpawnPoint.Y;
+                        _shakeDuration = 0.4f;
+                        _shakeIntensity = 12f;
+                        if (slamHitbox.Intersects(_dummy.Bounds))
+                        {
+                            _dummy.Health -= 30;
+                            _dummy.ApplyHit(new Vector2(0f, -700f), 0.25f);
+                        }
+                        // NEU: Auch der Barhocker zerspringt SOFORT in tausend Teile!
+                        _weaponManager.InstaBreakHeldWeapon();
                     }
-                    weaponsList[i] = w;
+                    else
+                    {
+                        _shakeDuration = 0.25f;
+                        _shakeIntensity = 6f;
+                        if (slamHitbox.Intersects(_dummy.Bounds))
+                        {
+                            _dummy.Health -= 15;
+                            _dummy.ApplyHit(new Vector2(0f, -400f), 0.2f);
+                        }
+                    }
                 }
             }
 
-            // SCREEN SHAKE ENGINE
-            if (shakeDuration > 0)
+            _player.IsAttacking = false;
+            _player.IsStabbing = false;
+
+            if (kState.IsKeyDown(Keys.F) && _oldKeyboardState.IsKeyUp(Keys.F))
             {
-                shakeDuration -= dt;
-                float shakeX = (float)(Math.Sin(gameTime.TotalGameTime.TotalMilliseconds * 1.2) * shakeIntensity);
-                float shakeY = (float)(Math.Cos(gameTime.TotalGameTime.TotalMilliseconds * 1.5) * shakeIntensity);
-                cameraOffset = new Vector2(shakeX, shakeY);
-                shakeIntensity = MathHelper.Lerp(shakeIntensity, 0f, 6f * dt);
+                if (_player.IsCarryingDummy && !_player.IsGrounded)
+                {
+                    _player.IsSlamming = true;
+                }
+                else if (!_player.IsCarryingDummy)
+                {
+                    bool strikeTriggered = false;
+                    float forceX = 0f, forceY = 0f;
+
+                    if (_weaponManager.HeldWeaponIndex != -1)
+                    {
+                        WeaponItem currentWeapon = _weaponManager.Weapons[_weaponManager.HeldWeaponIndex];
+
+                        if (!_player.IsGrounded && (currentWeapon.Type == WeaponType.Barstool || currentWeapon.Type == WeaponType.Jukebox))
+                        {
+                            _player.IsSlamming = true;
+                        }
+                        else if (!_isSwinging && (currentWeapon.Type == WeaponType.Bottle || currentWeapon.Type == WeaponType.BilliardCue || currentWeapon.Type == WeaponType.Barstool))
+                        {
+                            _isSwinging = true;
+                            _isPunching = false;
+                            _swingTimer = 0f;
+
+                            if (currentWeapon.Type == WeaponType.Bottle)
+                            {
+                                _currentStrikeDamage = 10;
+                                _currentSwingReach = 60;
+                                _currentSwingDuration = 0.10f;
+                                forceX = _player.IsFacingRight ? 450f : -450f;
+                                forceY = -120f;
+                                _player.IsStabbing = true;
+                            }
+                            else if (currentWeapon.Type == WeaponType.BilliardCue)
+                            {
+                                _currentStrikeDamage = 15;
+                                _currentSwingReach = 90;
+                                _currentSwingDuration = 0.25f;
+                                forceX = _player.IsFacingRight ? 600f : -600f;
+                                forceY = -150f;
+                                _player.IsAttacking = true;
+                            }
+                            else if (currentWeapon.Type == WeaponType.Barstool)
+                            {
+                                _currentStrikeDamage = 20;
+                                _currentSwingReach = 70;
+                                _currentSwingDuration = 0.35f;
+                                forceX = _player.IsFacingRight ? 750f : -750f;
+                                forceY = -200f;
+                                _player.IsAttacking = true;
+                            }
+
+                            int attackX = _player.IsFacingRight ? _player.Bounds.Right : _player.Bounds.Left - _currentSwingReach;
+                            _attackHitbox = new Rectangle(attackX, _player.Bounds.Y + 30, _currentSwingReach, 50);
+                            strikeTriggered = true;
+
+                            if (_attackHitbox.Intersects(_dummy.Bounds))
+                            {
+                                _weaponManager.ForceDestroyHeldWeapon(); // Normale Schläge ziehen nur 1 Haltbarkeit ab
+                            }
+                        }
+                    }
+                    else if (!_isSwinging && !_isPunching)
+                    {
+                        if (!_player.IsGrounded)
+                        {
+                            _player.IsSlamming = true;
+                        }
+                        else
+                        {
+                            _isPunching = true;
+                            _swingTimer = 0f;
+                            _currentStrikeDamage = 5;
+                            _currentSwingReach = 45;
+                            _currentSwingDuration = 0.15f;
+
+                            int attackX = _player.IsFacingRight ? _player.Bounds.Right : _player.Bounds.Left - _currentSwingReach;
+                            _attackHitbox = new Rectangle(attackX, _player.Bounds.Y + 40, _currentSwingReach, 40);
+
+                            strikeTriggered = true;
+                            forceX = _player.IsFacingRight ? 350f : -350f;
+                            forceY = -100f;
+
+                            _player.IsAttacking = true;
+                        }
+                    }
+
+                    if (strikeTriggered && _attackHitbox.Intersects(_dummy.Bounds))
+                    {
+                        _dummy.Health -= _currentStrikeDamage;
+                        float stunTime = _currentSwingDuration + 0.05f;
+                        _dummy.ApplyHit(new Vector2(forceX, forceY), stunTime);
+
+                        _shakeDuration = 0.1f;
+                        _shakeIntensity = (_currentStrikeDamage / 5f) + 1f;
+                    }
+                }
+            }
+
+            if (_isSwinging || _isPunching)
+            {
+                _swingTimer += dt;
+                if (_currentStrikeDamage == 10) _player.IsStabbing = true;
+                else _player.IsAttacking = true;
+
+                if (_swingTimer >= _currentSwingDuration)
+                {
+                    _isSwinging = false;
+                    _isPunching = false;
+                }
+            }
+
+            if (_shakeDuration > 0)
+            {
+                _shakeDuration -= dt;
+                _cameraOffset.X = (float)(_random.NextDouble() * 2 - 1) * _shakeIntensity;
+                _cameraOffset.Y = (float)(_random.NextDouble() * 2 - 1) * _shakeIntensity;
+                _shakeIntensity = MathHelper.Lerp(_shakeIntensity, 0f, 6f * dt);
             }
             else
             {
-                cameraOffset = Vector2.Zero;
+                _cameraOffset = Vector2.Zero;
             }
 
-            oldKeyboardState = kState;
+            _oldKeyboardState = kState;
             base.Update(gameTime);
         }
 
@@ -516,59 +326,15 @@ namespace Bar_Menace
         {
             GraphicsDevice.Clear(new Color(24, 20, 36));
 
-            _spriteBatch.Begin();
+            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-            // Draw Platforms
-            foreach (Rectangle platform in barPlatforms)
-            {
-                Rectangle renderRect = platform;
-                renderRect.X += (int)cameraOffset.X;
-                renderRect.Y += (int)cameraOffset.Y;
-                _spriteBatch.Draw(pixelTexture, renderRect, new Color(139, 69, 19));
-            }
-
-            // Draw Weapons
-            foreach (WeaponItem weapon in weaponsList)
-            {
-                if (weapon.State == WeaponState.OnGround || weapon.State == WeaponState.Held || weapon.State == WeaponState.Thrown)
-                {
-                    Rectangle renderRect = weapon.BoundingBox;
-                    renderRect.X += (int)cameraOffset.X;
-                    renderRect.Y += (int)cameraOffset.Y;
-                    _spriteBatch.Draw(pixelTexture, renderRect, weapon.DebugColor);
-                }
-            }
-
-            // Draw Strike Flash Hitbox
-            if (isSwinging || isPunching)
-            {
-                Rectangle renderAttack = attackHitbox;
-                renderAttack.X += (int)cameraOffset.X;
-                renderAttack.Y += (int)cameraOffset.Y;
-                _spriteBatch.Draw(pixelTexture, renderAttack, attackBoxColor);
-            }
-
-            // Draw Practice Dummy
-            Rectangle dummyRenderBounds = dummyBounds;
-            dummyRenderBounds.X += (int)cameraOffset.X;
-            dummyRenderBounds.Y += (int)cameraOffset.Y;
-            Color dummyColor = isDummyHit ? Color.White : new Color(112, 128, 144);
-            _spriteBatch.Draw(pixelTexture, dummyRenderBounds, dummyColor);
-
-            // Draw Player
-            Rectangle playerRenderBounds = playerBounds;
-            playerRenderBounds.X += (int)cameraOffset.X;
-            playerRenderBounds.Y += (int)cameraOffset.Y;
-            Color playerColor = isSlamming ? Color.Gold : Color.Crimson;
-            _spriteBatch.Draw(pixelTexture, playerRenderBounds, playerColor);
+            _level.Draw(_spriteBatch, _pixelTexture, _cameraOffset);
+            _weaponManager.Draw(_spriteBatch, _pixelTexture, _cameraOffset);
+            _dummy.Draw(_spriteBatch, _pixelTexture, _cameraOffset);
+            _player.Draw(_spriteBatch, _playerSprite, _cameraOffset);
 
             _spriteBatch.End();
             base.Draw(gameTime);
         }
     }
 }
-
-//zusammen Coded von Sami und Joud 
-//Joud behandelte die Bewegungsmechanik und Sami und Joud den Rest Allgemmein
-
-//Hilfe von KI war definitiv gebraucht :D 

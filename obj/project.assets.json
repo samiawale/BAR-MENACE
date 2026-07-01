@@ -4159,19 +4159,19 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\sami\\.nuget\\packages\\": {}
+    "C:\\Users\\samia\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\sami\\Desktop\\Bar_Menace\\Bar_Menace.csproj",
+      "projectUniqueName": "C:\\Users\\samia\\Desktop\\OVGU\\3D-Game\\Bar_Menace\\Bar_Menace\\Bar_Menace.csproj",
       "projectName": "Bar_Menace",
-      "projectPath": "C:\\Users\\sami\\Desktop\\Bar_Menace\\Bar_Menace.csproj",
-      "packagesPath": "C:\\Users\\sami\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\sami\\Desktop\\Bar_Menace\\obj\\",
+      "projectPath": "C:\\Users\\samia\\Desktop\\OVGU\\3D-Game\\Bar_Menace\\Bar_Menace\\Bar_Menace.csproj",
+      "packagesPath": "C:\\Users\\samia\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\samia\\Desktop\\OVGU\\3D-Game\\Bar_Menace\\Bar_Menace\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\sami\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\samia\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
@@ -4233,7 +4233,7 @@
             "privateAssets": "none"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.300/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.301/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

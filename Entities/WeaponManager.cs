@@ -11,17 +11,23 @@ namespace Bar_Menace.Entities
         public List<WeaponItem> Weapons { get; private set; }
         public int HeldWeaponIndex { get; private set; } = -1;
 
-        public WeaponManager()
+        private Texture2D _bottleTexture;
+        private Texture2D _cueTexture;
+
+        public WeaponManager(Texture2D bottleTexture, Texture2D cueTexture)
         {
+            _bottleTexture = bottleTexture;
+            _cueTexture = cueTexture;
+
             Weapons = new List<WeaponItem>();
-            // Exaktes Balancing!
-            CreateWeapon(WeaponType.Bottle, new Vector2(280, 468), 2, Color.LimeGreen);
-            CreateWeapon(WeaponType.BilliardCue, new Vector2(940, 468), 4, Color.Tan);
-            CreateWeapon(WeaponType.Barstool, new Vector2(620, 318), 3, Color.OrangeRed);
-            CreateWeapon(WeaponType.Jukebox, new Vector2(480, 318), 2, Color.Purple);
+
+            CreateWeapon(WeaponType.Bottle, new Vector2(280, 468), 2, Color.LimeGreen, _bottleTexture);
+            CreateWeapon(WeaponType.BilliardCue, new Vector2(940, 468), 4, Color.Tan, _cueTexture);
+            CreateWeapon(WeaponType.Barstool, new Vector2(620, 318), 3, Color.OrangeRed, null);
+            CreateWeapon(WeaponType.Jukebox, new Vector2(480, 318), 2, Color.Purple, null);
         }
 
-        private void CreateWeapon(WeaponType type, Vector2 pos, int durability, Color debugColor)
+        private void CreateWeapon(WeaponType type, Vector2 pos, int durability, Color debugColor, Texture2D texture)
         {
             WeaponItem weapon = new WeaponItem();
             weapon.Type = type;
@@ -31,7 +37,21 @@ namespace Bar_Menace.Entities
             weapon.MaxDurability = durability;
             weapon.CurrentDurability = durability;
             weapon.DebugColor = debugColor;
-            weapon.BoundingBox = new Rectangle((int)pos.X, (int)pos.Y, 32, 32);
+            weapon.CustomTexture = texture;
+            weapon.Rotation = 0f;
+
+            int texWidth = texture != null ? texture.Width : 32;
+            int texHeight = texture != null ? texture.Height : 32;
+
+            // Bounding box size matching the desired visual scale
+            int width = (type == WeaponType.BilliardCue) ? 50 : 32;
+            int height = 32;
+
+            weapon.BoundingBox = new Rectangle((int)pos.X, (int)pos.Y, width, height);
+
+            // Default origin at center
+            weapon.Origin = new Vector2(texWidth / 2f, texHeight / 2f);
+
             Weapons.Add(weapon);
         }
 
@@ -127,10 +147,17 @@ namespace Bar_Menace.Entities
 
                 if (w.State == WeaponState.Held && HeldWeaponIndex == i)
                 {
+                    w.Rotation = 0f;
                     if (w.Type == WeaponType.Barstool || w.Type == WeaponType.Jukebox)
                     {
                         float offsetX = player.IsFacingRight ? 16 : 16;
                         w.Position = new Vector2(player.Position.X + offsetX, player.Position.Y - 25);
+                    }
+                    else if (w.Type == WeaponType.BilliardCue)
+                    {
+                        // Position close to hands, holding from the left edge
+                        float offsetX = player.IsFacingRight ? 20 : -20;
+                        w.Position = new Vector2(player.Position.X + offsetX, player.Position.Y + 45);
                     }
                     else
                     {
@@ -140,6 +167,15 @@ namespace Bar_Menace.Entities
                 }
                 else if (w.State == WeaponState.Thrown || w.State == WeaponState.OnGround)
                 {
+                    if (w.State == WeaponState.Thrown)
+                    {
+                        w.Rotation += 10f * dt;
+                    }
+                    else
+                    {
+                        w.Rotation = 0f;
+                    }
+
                     w.Velocity.Y += 1200f * dt;
                     w.Position += w.Velocity * dt;
                     bool hitSurface = false;
@@ -172,21 +208,21 @@ namespace Bar_Menace.Entities
                     }
                     else
                     {
-                        Rectangle upcomingBounds = new Rectangle((int)w.Position.X, (int)w.Position.Y, 32, 32);
+                        Rectangle upcomingBounds = new Rectangle((int)w.Position.X, (int)w.Position.Y, w.BoundingBox.Width, w.BoundingBox.Height);
                         foreach (Rectangle platform in platforms)
                         {
                             if (upcomingBounds.Intersects(platform))
                             {
                                 if (w.Velocity.Y > 0 && (upcomingBounds.Bottom - w.Velocity.Y * dt) <= platform.Top + 15)
                                 {
-                                    w.Position.Y = platform.Top - 32;
+                                    w.Position.Y = platform.Top - w.BoundingBox.Height;
                                     hitSurface = true;
                                 }
                             }
                         }
-                        if (w.Position.Y >= screenHeight - 32)
+                        if (w.Position.Y >= screenHeight - w.BoundingBox.Height)
                         {
-                            w.Position.Y = screenHeight - 32;
+                            w.Position.Y = screenHeight - w.BoundingBox.Height;
                             hitSurface = true;
                         }
                     }
@@ -217,8 +253,6 @@ namespace Bar_Menace.Entities
                         }
                     }
 
-                    // NEU: Kugelsicherer Out-Of-Bounds-Check!
-                    // Egal ob zu weit links, rechts oder sogar durch den Boden gefallen: Waffe wird resettet.
                     if (w.Position.X < -200 || w.Position.X > screenWidth + 200 || w.Position.Y > screenHeight + 200)
                     {
                         w.State = WeaponState.Respawning;
@@ -232,7 +266,6 @@ namespace Bar_Menace.Entities
                     w.CooldownTimer -= dt;
                     if (w.CooldownTimer <= 0)
                     {
-                        // Respawnt die Waffe unversehrt am Ursprungsort
                         w.State = WeaponState.OnGround;
                         w.CurrentDurability = w.MaxDurability;
                         w.Position = w.SpawnPoint;
@@ -246,15 +279,62 @@ namespace Bar_Menace.Entities
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, Texture2D pixelTexture, Vector2 cameraOffset)
+        public void Draw(SpriteBatch spriteBatch, Texture2D pixelTexture, Vector2 cameraOffset, Player player)
         {
             foreach (WeaponItem weapon in Weapons)
             {
                 if (weapon.State != WeaponState.Respawning)
                 {
-                    Rectangle renderRect = new Rectangle((int)weapon.Position.X + (int)cameraOffset.X,
-                                                         (int)weapon.Position.Y + (int)cameraOffset.Y, 32, 32);
-                    spriteBatch.Draw(pixelTexture, renderRect, weapon.DebugColor);
+                    Vector2 drawPos = new Vector2(weapon.Position.X + cameraOffset.X, weapon.Position.Y + cameraOffset.Y);
+
+                    if (weapon.CustomTexture != null)
+                    {
+                        float scale = 1f;
+                        Vector2 origin = weapon.Origin;
+                        SpriteEffects effect = SpriteEffects.None;
+
+                        if (weapon.Type == WeaponType.Bottle)
+                        {
+                            scale = 1.8f;
+                        }
+                        else if (weapon.Type == WeaponType.BilliardCue)
+                        {
+                            scale = 0.15f;
+
+                            if (weapon.State == WeaponState.Held)
+                            {
+                                // If facing left, flip horizontally and anchor from the right edge (which becomes the left when flipped)
+                                if (!player.IsFacingRight)
+                                {
+                                    effect = SpriteEffects.FlipHorizontally;
+                                    origin = new Vector2(weapon.CustomTexture.Width, weapon.CustomTexture.Height / 2f);
+                                }
+                                else
+                                {
+                                    origin = new Vector2(0, weapon.CustomTexture.Height / 2f);
+                                }
+                            }
+                        }
+
+                        Vector2 centeredPos = new Vector2(drawPos.X + (weapon.BoundingBox.Width / 2f), drawPos.Y + (weapon.BoundingBox.Height / 2f));
+
+                        spriteBatch.Draw(
+                            weapon.CustomTexture,
+                            centeredPos,
+                            null,
+                            Color.White,
+                            weapon.Rotation,
+                            origin,
+                            scale,
+                            effect,
+                            0f
+                        );
+                    }
+                    else
+                    {
+                        Rectangle renderRect = new Rectangle((int)drawPos.X, (int)drawPos.Y, weapon.BoundingBox.Width, weapon.BoundingBox.Height);
+                        spriteBatch.Draw(pixelTexture, renderRect, weapon.DebugColor);
+                    }
                 }
             }
         }

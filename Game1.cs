@@ -15,6 +15,9 @@ namespace Bar_Menace
         private Texture2D _playerSprite;
         private Texture2D _dummySprite;
 
+        private Texture2D _bottleTexture;
+        private Texture2D _cueTexture;
+
         private Player _player;
         private Dummy _dummy;
         private Level _level;
@@ -27,8 +30,9 @@ namespace Bar_Menace
         private bool _isPunching = false;
         private float _swingTimer = 0f;
         private float _currentSwingDuration = 0.15f;
-        private int _currentSwingReach = 50;
         private int _currentStrikeDamage = 0;
+        private float forceX = 0f;
+        private float forceY = 0f;
         private Rectangle _attackHitbox;
 
         private float _shakeDuration = 0f;
@@ -58,10 +62,13 @@ namespace Bar_Menace
             _playerSprite = Content.Load<Texture2D>("player_sprite");
             _dummySprite = Content.Load<Texture2D>("dummy_sprite");
 
+            _bottleTexture = Content.Load<Texture2D>("beer");
+            _cueTexture = Content.Load<Texture2D>("billiards_cue");
+
             _player = new Player(new Vector2(640, 200));
             _dummy = new Dummy(new Vector2(900, 300));
             _level = new Level();
-            _weaponManager = new WeaponManager();
+            _weaponManager = new WeaponManager(_bottleTexture, _cueTexture);
             _random = new Random();
         }
 
@@ -97,8 +104,6 @@ namespace Bar_Menace
                 _dummy.IsCarried = true;
                 float offsetOffsetX = _player.IsFacingRight ? 10 : -10;
                 _dummy.Position.X = _player.Position.X + offsetOffsetX;
-
-                // NEW: Lifted the dummy way up to rest on top of the head!
                 _dummy.Position.Y = _player.Position.Y - 100;
                 _dummy.Velocity = Vector2.Zero;
             }
@@ -178,22 +183,50 @@ namespace Bar_Menace
                 else if (!_player.IsCarryingDummy)
                 {
                     bool strikeTriggered = false;
-                    float forceX = 0f, forceY = 0f;
 
                     if (_weaponManager.HeldWeaponIndex != -1)
                     {
                         WeaponItem currentWeapon = _weaponManager.Weapons[_weaponManager.HeldWeaponIndex];
                         if (!_player.IsGrounded && (currentWeapon.Type == WeaponType.Barstool || currentWeapon.Type == WeaponType.Jukebox)) _player.IsSlamming = true;
-                        else if (!_isSwinging && (currentWeapon.Type == WeaponType.Bottle || currentWeapon.Type == WeaponType.BilliardCue || currentWeapon.Type == WeaponType.Barstool))
+                        else if (!_isSwinging)
                         {
-                            _isSwinging = true; _swingTimer = 0f;
-                            if (currentWeapon.Type == WeaponType.Bottle) { _currentStrikeDamage = 10; forceX = _player.IsFacingRight ? 450f : -450f; forceY = -120f; _player.IsStabbing = true; _currentSwingDuration = 0.15f; }
-                            else if (currentWeapon.Type == WeaponType.BilliardCue) { _currentStrikeDamage = 15; forceX = _player.IsFacingRight ? 600f : -600f; forceY = -150f; _player.IsAttacking = true; _currentSwingDuration = 0.3f; }
-                            else if (currentWeapon.Type == WeaponType.Barstool) { _currentStrikeDamage = 20; forceX = _player.IsFacingRight ? 750f : -750f; forceY = -200f; _player.IsAttacking = true; _currentSwingDuration = 0.35f; }
+                            _isSwinging = true;
+                            _swingTimer = 0f;
 
-                            _attackHitbox = new Rectangle(_player.IsFacingRight ? _player.Bounds.Right : _player.Bounds.Left - 70, _player.Bounds.Y + 30, 70, 50);
+                            if (currentWeapon.Type == WeaponType.Bottle)
+                            {
+                                _currentStrikeDamage = 10;
+                                forceX = _player.IsFacingRight ? 450f : -450f;
+                                forceY = -120f;
+                                _player.IsStabbing = true;
+                                _currentSwingDuration = 0.15f;
+                            }
+                            else if (currentWeapon.Type == WeaponType.BilliardCue)
+                            {
+                                _currentStrikeDamage = 15;
+                                forceX = _player.IsFacingRight ? 600f : -600f;
+                                forceY = -150f;
+                                _player.IsAttacking = true;
+                                _currentSwingDuration = 0.3f;
+                            }
+                            else if (currentWeapon.Type == WeaponType.Barstool)
+                            {
+                                _currentStrikeDamage = 20;
+                                forceX = _player.IsFacingRight ? 750f : -750f;
+                                forceY = -200f;
+                                _player.IsAttacking = true;
+                                _currentSwingDuration = 0.35f;
+                            }
+                            else if (currentWeapon.Type == WeaponType.Jukebox)
+                            {
+                                _currentStrikeDamage = 35;
+                                forceX = _player.IsFacingRight ? 900f : -900f;
+                                forceY = -250f;
+                                _player.IsAttacking = true;
+                                _currentSwingDuration = 0.4f;
+                            }
+
                             strikeTriggered = true;
-                            if (_attackHitbox.Intersects(_dummy.Bounds)) _weaponManager.ForceDestroyHeldWeapon();
                         }
                     }
                     else if (!_isSwinging && !_isPunching)
@@ -201,24 +234,20 @@ namespace Bar_Menace
                         if (!_player.IsGrounded) _player.IsSlamming = true;
                         else
                         {
-                            _isPunching = true; _swingTimer = 0f; _currentStrikeDamage = 5;
+                            _isPunching = true;
+                            _swingTimer = 0f;
+                            _currentStrikeDamage = 5;
                             _currentSwingDuration = 0.75f;
-                            _attackHitbox = new Rectangle(_player.IsFacingRight ? _player.Bounds.Right : _player.Bounds.Left - 45, _player.Bounds.Y + 40, 45, 40);
-                            strikeTriggered = true; forceX = _player.IsFacingRight ? 350f : -350f; forceY = -100f; _player.IsAttacking = true;
+                            forceX = _player.IsFacingRight ? 350f : -350f;
+                            forceY = -100f;
+                            _player.IsAttacking = true;
+                            strikeTriggered = true;
                         }
                     }
 
                     if (strikeTriggered)
                     {
-                        // NEW: Triggers the animation to reset properly!
                         _player.TriggerAttack();
-
-                        if (_attackHitbox.Intersects(_dummy.Bounds))
-                        {
-                            _dummy.Health -= _currentStrikeDamage;
-                            _dummy.ApplyHit(new Vector2(forceX, forceY), 0.3f);
-                            _shakeDuration = 0.1f; _shakeIntensity = 2f;
-                        }
                     }
                 }
             }
@@ -226,10 +255,45 @@ namespace Bar_Menace
             if (_isSwinging || _isPunching)
             {
                 _swingTimer += dt;
+
+                int reach = 45;
+                if (_weaponManager.HeldWeaponIndex != -1)
+                {
+                    WeaponType currentWeapon = _weaponManager.Weapons[_weaponManager.HeldWeaponIndex].Type;
+                    // REICHWEITE HIER ERHÖHT: von 85 auf 120
+                    if (currentWeapon == WeaponType.BilliardCue) reach = 120;
+                    else if (currentWeapon == WeaponType.Barstool) reach = 70;
+                    else if (currentWeapon == WeaponType.Jukebox) reach = 80;
+                    else if (currentWeapon == WeaponType.Bottle) reach = 60;
+                }
+
+                int hitboxX = _player.IsFacingRight ? _player.Bounds.Right : _player.Bounds.Left - reach;
+                _attackHitbox = new Rectangle(hitboxX, _player.Bounds.Y + 20, reach, 50);
+
                 if (_currentStrikeDamage == 10) _player.IsStabbing = true;
                 else _player.IsAttacking = true;
 
-                if (_swingTimer >= _currentSwingDuration) { _isSwinging = false; _isPunching = false; }
+                if (_attackHitbox.Intersects(_dummy.Bounds))
+                {
+                    _dummy.Health -= _currentStrikeDamage;
+                    _dummy.ApplyHit(new Vector2(forceX, forceY), 0.3f);
+                    _shakeDuration = 0.1f;
+                    _shakeIntensity = 2f;
+
+                    if (_weaponManager.HeldWeaponIndex != -1)
+                    {
+                        _weaponManager.ForceDestroyHeldWeapon();
+                    }
+
+                    _isSwinging = false;
+                    _isPunching = false;
+                }
+
+                if (_swingTimer >= _currentSwingDuration)
+                {
+                    _isSwinging = false;
+                    _isPunching = false;
+                }
             }
 
             if (_shakeDuration > 0)
@@ -250,7 +314,7 @@ namespace Bar_Menace
             GraphicsDevice.Clear(new Color(24, 20, 36));
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             _level.Draw(_spriteBatch, _pixelTexture, _cameraOffset);
-            _weaponManager.Draw(_spriteBatch, _pixelTexture, _cameraOffset);
+            _weaponManager.Draw(_spriteBatch, _pixelTexture, _cameraOffset, _player);
             _dummy.Draw(_spriteBatch, _dummySprite, _cameraOffset);
             _player.Draw(_spriteBatch, _playerSprite, _cameraOffset);
             _spriteBatch.End();
@@ -258,4 +322,4 @@ namespace Bar_Menace
         }
     }
 }
-//By Sami And Joud 
+//By Sami And Joud1

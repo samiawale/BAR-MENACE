@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Bar_Menace.Entities
 {
@@ -32,6 +33,11 @@ namespace Bar_Menace.Entities
         public int CurrentDurability;
         public float CooldownTimer;
         public Rectangle BoundingBox;
-        public Color DebugColor; // Wird später durch echte Sprites ersetzt
+        public Color DebugColor;
+
+        // NEU: Diese Felder werden für die echten Texturen und das Rotieren benötigt
+        public Texture2D CustomTexture;
+        public Vector2 Origin;
+        public float Rotation;
     }
 }

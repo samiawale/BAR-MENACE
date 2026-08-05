@@ -81,15 +81,16 @@ namespace Bar_Menace
             int screenWidth = GraphicsDevice.Viewport.Width;
             int screenHeight = GraphicsDevice.Viewport.Height;
 
-            float weaponWeight = 1.0f;
-            _player.IsCarryingHeavy = false;
+            // --- BEWEGUNGSGESCHWINDIGKEIT & GEWICHT ---
+            float weaponWeight = WeaponDatabase.Unarmed.WeightMultiplier;
+            _player.IsCarryingHeavy = WeaponDatabase.Unarmed.IsHeavy;
 
             if (_weaponManager.HeldWeaponIndex != -1)
             {
                 WeaponType heldType = _weaponManager.Weapons[_weaponManager.HeldWeaponIndex].Type;
-                if (heldType == WeaponType.BilliardCue) weaponWeight = 0.85f;
-                else if (heldType == WeaponType.Barstool) { weaponWeight = 0.65f; _player.IsCarryingHeavy = true; }
-                else if (heldType == WeaponType.Jukebox) { weaponWeight = 0.45f; _player.IsCarryingHeavy = true; }
+                WeaponData data = WeaponDatabase.Stats[heldType];
+                weaponWeight = data.WeightMultiplier;
+                _player.IsCarryingHeavy = data.IsHeavy;
             }
             if (_player.IsCarryingDummy) weaponWeight = 0.5f;
 
@@ -99,6 +100,7 @@ namespace Bar_Menace
             _weaponManager.Update(dt, kState, _oldKeyboardState, _player, _dummy, _level.Platforms, screenWidth, screenHeight, out projectileTriggeredShake);
             if (projectileTriggeredShake) { _shakeDuration = 0.15f; _shakeIntensity = 5f; }
 
+            // Dummy tragen Update
             if (_player.IsCarryingDummy)
             {
                 _dummy.IsCarried = true;
@@ -107,12 +109,11 @@ namespace Bar_Menace
                 _dummy.Position.Y = _player.Position.Y - 100;
                 _dummy.Velocity = Vector2.Zero;
             }
-            else
-            {
-                _dummy.IsCarried = false;
-            }
+            else _dummy.IsCarried = false;
+
             _dummy.Update(dt, screenWidth, screenHeight, _level.Platforms);
 
+            // E: Aufheben / Fallen lassen
             if (kState.IsKeyDown(Keys.E) && _oldKeyboardState.IsKeyUp(Keys.E) && !_player.IsSlamming)
             {
                 if (_weaponManager.HeldWeaponIndex == -1 && !_player.IsCarryingDummy)
@@ -127,6 +128,7 @@ namespace Bar_Menace
                 }
             }
 
+            // Q: Werfen
             if (kState.IsKeyDown(Keys.Q) && _oldKeyboardState.IsKeyUp(Keys.Q) && _player.IsCarryingDummy && !_player.IsSlamming)
             {
                 _player.IsCarryingDummy = false;
@@ -134,6 +136,7 @@ namespace Bar_Menace
                 _player.TriggerThrow();
             }
 
+            // Landung nach dem Slam
             if (_player.JustLandedSlam)
             {
                 if (_player.IsCarryingDummy)
@@ -154,7 +157,9 @@ namespace Bar_Menace
                     if (_weaponManager.HeldWeaponIndex != -1)
                     {
                         WeaponType t = _weaponManager.Weapons[_weaponManager.HeldWeaponIndex].Type;
-                        if (t == WeaponType.Jukebox || t == WeaponType.Barstool)
+                        WeaponData data = WeaponDatabase.Stats[t];
+
+                        if (data.IsHeavy)
                         {
                             _shakeDuration = (t == WeaponType.Jukebox) ? 0.6f : 0.4f;
                             _shakeIntensity = (t == WeaponType.Jukebox) ? 20f : 12f;
@@ -177,6 +182,7 @@ namespace Bar_Menace
 
             _player.IsAttacking = false; _player.IsStabbing = false;
 
+            // --- ANGRIFFS LOGIK (F-TASTE) ---
             if (kState.IsKeyDown(Keys.F) && _oldKeyboardState.IsKeyUp(Keys.F))
             {
                 if (_player.IsCarryingDummy && !_player.IsGrounded) _player.IsSlamming = true;
@@ -184,106 +190,86 @@ namespace Bar_Menace
                 {
                     bool strikeTriggered = false;
 
-                    if (_weaponManager.HeldWeaponIndex != -1)
+                    if (_weaponManager.HeldWeaponIndex != -1) // Mit Waffe
                     {
                         WeaponItem currentWeapon = _weaponManager.Weapons[_weaponManager.HeldWeaponIndex];
-                        if (!_player.IsGrounded && (currentWeapon.Type == WeaponType.Barstool || currentWeapon.Type == WeaponType.Jukebox)) _player.IsSlamming = true;
+                        WeaponData data = WeaponDatabase.Stats[currentWeapon.Type];
+
+                        if (!_player.IsGrounded && data.IsHeavy) _player.IsSlamming = true;
                         else if (!_isSwinging)
                         {
                             _isSwinging = true;
                             _swingTimer = 0f;
 
-                            if (currentWeapon.Type == WeaponType.Bottle)
-                            {
-                                _currentStrikeDamage = 10;
-                                forceX = _player.IsFacingRight ? 450f : -450f;
-                                forceY = -120f;
-                                _player.IsStabbing = true;
-                                _currentSwingDuration = 0.15f;
-                            }
-                            else if (currentWeapon.Type == WeaponType.BilliardCue)
-                            {
-                                _currentStrikeDamage = 15;
-                                forceX = _player.IsFacingRight ? 600f : -600f;
-                                forceY = -150f;
-                                _player.IsAttacking = true;
-                                _currentSwingDuration = 0.3f;
-                            }
-                            else if (currentWeapon.Type == WeaponType.Barstool)
-                            {
-                                _currentStrikeDamage = 20;
-                                forceX = _player.IsFacingRight ? 750f : -750f;
-                                forceY = -200f;
-                                _player.IsAttacking = true;
-                                _currentSwingDuration = 0.35f;
-                            }
-                            else if (currentWeapon.Type == WeaponType.Jukebox)
-                            {
-                                _currentStrikeDamage = 35;
-                                forceX = _player.IsFacingRight ? 900f : -900f;
-                                forceY = -250f;
-                                _player.IsAttacking = true;
-                                _currentSwingDuration = 0.4f;
-                            }
+                            // Holt alle Werte direkt aus der Datenbank!
+                            _currentStrikeDamage = data.StrikeDamage;
+                            forceX = _player.IsFacingRight ? data.StrikeForceX : -data.StrikeForceX;
+                            forceY = data.StrikeForceY;
+                            _currentSwingDuration = data.SwingDuration;
+
+                            if (currentWeapon.Type == WeaponType.Bottle) _player.IsStabbing = true;
+                            else _player.IsAttacking = true;
 
                             strikeTriggered = true;
                         }
                     }
-                    else if (!_isSwinging && !_isPunching)
+                    else if (!_isSwinging && !_isPunching) // Unbewaffnet (Faustschlag)
                     {
                         if (!_player.IsGrounded) _player.IsSlamming = true;
                         else
                         {
+                            WeaponData unarmedData = WeaponDatabase.Unarmed;
+
                             _isPunching = true;
                             _swingTimer = 0f;
-                            _currentStrikeDamage = 5;
-                            _currentSwingDuration = 0.75f;
-                            forceX = _player.IsFacingRight ? 350f : -350f;
-                            forceY = -100f;
+
+                            // Holt Faust-Werte aus der Datenbank
+                            _currentStrikeDamage = unarmedData.StrikeDamage;
+                            _currentSwingDuration = unarmedData.SwingDuration;
+                            forceX = _player.IsFacingRight ? unarmedData.StrikeForceX : -unarmedData.StrikeForceX;
+                            forceY = unarmedData.StrikeForceY;
+
                             _player.IsAttacking = true;
                             strikeTriggered = true;
                         }
                     }
 
-                    if (strikeTriggered)
-                    {
-                        _player.TriggerAttack();
-                    }
+                    if (strikeTriggered) _player.TriggerAttack();
                 }
             }
 
+            // --- KONTINUIERLICHE HITBOX WÄHREND DEM SCHLAG ---
             if (_isSwinging || _isPunching)
             {
                 _swingTimer += dt;
 
-                int reach = 45;
+                // Reichweite aus der Datenbank holen
+                int reach = WeaponDatabase.Unarmed.HitboxReach;
+                bool isBottle = false;
+
                 if (_weaponManager.HeldWeaponIndex != -1)
                 {
-                    WeaponType currentWeapon = _weaponManager.Weapons[_weaponManager.HeldWeaponIndex].Type;
-                    // REICHWEITE HIER ERHÖHT: von 85 auf 120
-                    if (currentWeapon == WeaponType.BilliardCue) reach = 120;
-                    else if (currentWeapon == WeaponType.Barstool) reach = 70;
-                    else if (currentWeapon == WeaponType.Jukebox) reach = 80;
-                    else if (currentWeapon == WeaponType.Bottle) reach = 60;
+                    WeaponType heldType = _weaponManager.Weapons[_weaponManager.HeldWeaponIndex].Type;
+                    reach = WeaponDatabase.Stats[heldType].HitboxReach;
+                    if (heldType == WeaponType.Bottle) isBottle = true;
                 }
 
                 int hitboxX = _player.IsFacingRight ? _player.Bounds.Right : _player.Bounds.Left - reach;
                 _attackHitbox = new Rectangle(hitboxX, _player.Bounds.Y + 20, reach, 50);
 
-                if (_currentStrikeDamage == 10) _player.IsStabbing = true;
+                if (isBottle) _player.IsStabbing = true;
                 else _player.IsAttacking = true;
 
+                // Treffer abfragen
                 if (_attackHitbox.Intersects(_dummy.Bounds))
                 {
                     _dummy.Health -= _currentStrikeDamage;
                     _dummy.ApplyHit(new Vector2(forceX, forceY), 0.3f);
+
                     _shakeDuration = 0.1f;
                     _shakeIntensity = 2f;
 
-                    if (_weaponManager.HeldWeaponIndex != -1)
-                    {
-                        _weaponManager.ForceDestroyHeldWeapon();
-                    }
+                    if (_weaponManager.HeldWeaponIndex != -1) _weaponManager.ForceDestroyHeldWeapon();
 
                     _isSwinging = false;
                     _isPunching = false;
@@ -296,6 +282,7 @@ namespace Bar_Menace
                 }
             }
 
+            // Kamera-Wackeln
             if (_shakeDuration > 0)
             {
                 _shakeDuration -= dt;
@@ -322,4 +309,3 @@ namespace Bar_Menace
         }
     }
 }
-//By Sami And Joud1

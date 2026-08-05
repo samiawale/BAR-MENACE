@@ -43,13 +43,10 @@ namespace Bar_Menace.Entities
             int texWidth = texture != null ? texture.Width : 32;
             int texHeight = texture != null ? texture.Height : 32;
 
-            // Bounding box size matching the desired visual scale
             int width = (type == WeaponType.BilliardCue) ? 50 : 32;
             int height = 32;
 
             weapon.BoundingBox = new Rectangle((int)pos.X, (int)pos.Y, width, height);
-
-            // Default origin at center
             weapon.Origin = new Vector2(texWidth / 2f, texHeight / 2f);
 
             Weapons.Add(weapon);
@@ -96,6 +93,7 @@ namespace Bar_Menace.Entities
         {
             triggerShake = false;
 
+            // E: Aufheben / Fallenlassen
             if (kState.IsKeyDown(Keys.E) && oldKState.IsKeyUp(Keys.E) && !player.IsSlamming && !player.IsCarryingDummy)
             {
                 if (HeldWeaponIndex == -1)
@@ -125,16 +123,16 @@ namespace Bar_Menace.Entities
                 }
             }
 
+            // Q: Werfen
             if (kState.IsKeyDown(Keys.Q) && oldKState.IsKeyUp(Keys.Q) && HeldWeaponIndex != -1 && !player.IsSlamming)
             {
                 WeaponItem w = Weapons[HeldWeaponIndex];
                 w.State = WeaponState.Thrown;
                 float throwDirection = player.IsFacingRight ? 1f : -1f;
 
-                if (w.Type == WeaponType.Bottle) w.Velocity = new Vector2(1000f * throwDirection, -200f);
-                else if (w.Type == WeaponType.BilliardCue) w.Velocity = new Vector2(800f * throwDirection, -100f);
-                else if (w.Type == WeaponType.Barstool) w.Velocity = new Vector2(600f * throwDirection, -300f);
-                else w.Velocity = new Vector2(500f * throwDirection, -400f);
+                // DATENBANK-ABFRAGE FÜR WURFGESCHWINDIGKEIT
+                WeaponData data = WeaponDatabase.Stats[w.Type];
+                w.Velocity = new Vector2(data.ThrowForceX * throwDirection, data.ThrowForceY);
 
                 Weapons[HeldWeaponIndex] = w;
                 HeldWeaponIndex = -1;
@@ -155,7 +153,6 @@ namespace Bar_Menace.Entities
                     }
                     else if (w.Type == WeaponType.BilliardCue)
                     {
-                        // Position close to hands, holding from the left edge
                         float offsetX = player.IsFacingRight ? 20 : -20;
                         w.Position = new Vector2(player.Position.X + offsetX, player.Position.Y + 45);
                     }
@@ -167,28 +164,20 @@ namespace Bar_Menace.Entities
                 }
                 else if (w.State == WeaponState.Thrown || w.State == WeaponState.OnGround)
                 {
-                    if (w.State == WeaponState.Thrown)
-                    {
-                        w.Rotation += 10f * dt;
-                    }
-                    else
-                    {
-                        w.Rotation = 0f;
-                    }
+                    if (w.State == WeaponState.Thrown) w.Rotation += 10f * dt;
+                    else w.Rotation = 0f;
 
                     w.Velocity.Y += 1200f * dt;
                     w.Position += w.Velocity * dt;
                     bool hitSurface = false;
 
+                    // Kollision mit dem Dummy bei Wurf
                     if (w.State == WeaponState.Thrown && w.BoundingBox.Intersects(dummy.Bounds))
                     {
-                        int damage = 10;
-                        if (w.Type == WeaponType.Bottle) damage = 12;
-                        else if (w.Type == WeaponType.BilliardCue) damage = 18;
-                        else if (w.Type == WeaponType.Barstool) damage = 25;
-                        else if (w.Type == WeaponType.Jukebox) damage = 40;
+                        // DATENBANK-ABFRAGE FÜR WURFSCHADEN
+                        WeaponData data = WeaponDatabase.Stats[w.Type];
+                        dummy.Health -= data.ThrowDamage;
 
-                        dummy.Health -= damage;
                         dummy.ApplyHit(new Vector2(w.Velocity.X * 0.5f, -300f), 0.3f);
                         triggerShake = true;
 
@@ -303,7 +292,6 @@ namespace Bar_Menace.Entities
 
                             if (weapon.State == WeaponState.Held)
                             {
-                                // If facing left, flip horizontally and anchor from the right edge (which becomes the left when flipped)
                                 if (!player.IsFacingRight)
                                 {
                                     effect = SpriteEffects.FlipHorizontally;

@@ -25,15 +25,6 @@ namespace Bar_Menace
 
         private Random _random;
 
-        private bool _isSwinging = false;
-        private bool _isPunching = false;
-        private float _swingTimer = 0f;
-        private float _currentSwingDuration = 0.15f;
-        private int _currentStrikeDamage = 0;
-        private float forceX = 0f;
-        private float forceY = 0f;
-        private Rectangle _attackHitbox;
-
         private float _shakeDuration = 0f;
         private float _shakeIntensity = 0f;
         private Vector2 _cameraOffset = Vector2.Zero;
@@ -73,7 +64,6 @@ namespace Bar_Menace
 
         protected override void Update(GameTime gameTime)
         {
-            // NEU: InputManager aktualisieren! Muss jeden Frame ganz oben passieren.
             InputManager.Update();
 
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || InputManager.JustPressed(Keys.Escape))
@@ -95,11 +85,9 @@ namespace Bar_Menace
             }
             if (_player.IsCarryingDummy) weaponWeight = 0.5f;
 
-            // NEU: Deutlich kürzere Parameterliste!
             _player.Update(dt, _level.Platforms, screenWidth, screenHeight, weaponWeight);
 
             bool projectileTriggeredShake;
-            // NEU: Deutlich kürzere Parameterliste!
             _weaponManager.Update(dt, _player, _dummy, _level.Platforms, screenWidth, screenHeight, out projectileTriggeredShake);
             if (projectileTriggeredShake) { _shakeDuration = 0.15f; _shakeIntensity = 5f; }
 
@@ -115,7 +103,7 @@ namespace Bar_Menace
 
             _dummy.Update(dt, screenWidth, screenHeight, _level.Platforms);
 
-            // NEU: InputManager
+            // Aufheben
             if (InputManager.JustPressed(Keys.E) && !_player.IsSlamming)
             {
                 if (_weaponManager.HeldWeaponIndex == -1 && !_player.IsCarryingDummy)
@@ -130,7 +118,7 @@ namespace Bar_Menace
                 }
             }
 
-            // NEU: InputManager
+            // Werfen (Dummy)
             if (InputManager.JustPressed(Keys.Q) && _player.IsCarryingDummy && !_player.IsSlamming)
             {
                 _player.IsCarryingDummy = false;
@@ -138,6 +126,7 @@ namespace Bar_Menace
                 _player.TriggerThrow();
             }
 
+            // Slam Landung
             if (_player.JustLandedSlam)
             {
                 if (_player.IsCarryingDummy)
@@ -181,103 +170,43 @@ namespace Bar_Menace
                 }
             }
 
-            _player.IsAttacking = false; _player.IsStabbing = false;
-
-            // NEU: InputManager
-            if (InputManager.JustPressed(Keys.F))
+            // --- NEU: SUPER-SAUBERE ANGRIFFS LOGIK ---
+            if (InputManager.JustPressed(Keys.F) && !_player.IsCarryingDummy)
             {
-                if (_player.IsCarryingDummy && !_player.IsGrounded) _player.IsSlamming = true;
-                else if (!_player.IsCarryingDummy)
-                {
-                    bool strikeTriggered = false;
-
-                    if (_weaponManager.HeldWeaponIndex != -1)
-                    {
-                        WeaponItem currentWeapon = _weaponManager.Weapons[_weaponManager.HeldWeaponIndex];
-                        WeaponData data = WeaponDatabase.Stats[currentWeapon.Type];
-
-                        if (!_player.IsGrounded && data.IsHeavy) _player.IsSlamming = true;
-                        else if (!_isSwinging)
-                        {
-                            _isSwinging = true;
-                            _swingTimer = 0f;
-
-                            _currentStrikeDamage = data.StrikeDamage;
-                            forceX = _player.IsFacingRight ? data.StrikeForceX : -data.StrikeForceX;
-                            forceY = data.StrikeForceY;
-                            _currentSwingDuration = data.SwingDuration;
-
-                            if (currentWeapon.Type == WeaponType.Bottle) _player.IsStabbing = true;
-                            else _player.IsAttacking = true;
-
-                            strikeTriggered = true;
-                        }
-                    }
-                    else if (!_isSwinging && !_isPunching)
-                    {
-                        if (!_player.IsGrounded) _player.IsSlamming = true;
-                        else
-                        {
-                            WeaponData unarmedData = WeaponDatabase.Unarmed;
-
-                            _isPunching = true;
-                            _swingTimer = 0f;
-
-                            _currentStrikeDamage = unarmedData.StrikeDamage;
-                            _currentSwingDuration = unarmedData.SwingDuration;
-                            forceX = _player.IsFacingRight ? unarmedData.StrikeForceX : -unarmedData.StrikeForceX;
-                            forceY = unarmedData.StrikeForceY;
-
-                            _player.IsAttacking = true;
-                            strikeTriggered = true;
-                        }
-                    }
-
-                    if (strikeTriggered) _player.TriggerAttack();
-                }
-            }
-
-            if (_isSwinging || _isPunching)
-            {
-                _swingTimer += dt;
-
-                int reach = WeaponDatabase.Unarmed.HitboxReach;
-                bool isBottle = false;
-
                 if (_weaponManager.HeldWeaponIndex != -1)
                 {
                     WeaponType heldType = _weaponManager.Weapons[_weaponManager.HeldWeaponIndex].Type;
-                    reach = WeaponDatabase.Stats[heldType].HitboxReach;
-                    if (heldType == WeaponType.Bottle) isBottle = true;
+                    WeaponData data = WeaponDatabase.Stats[heldType];
+
+                    if (!_player.IsGrounded && data.IsHeavy) _player.IsSlamming = true;
+                    else _player.PerformAttack(data, heldType == WeaponType.Bottle);
                 }
-
-                int hitboxX = _player.IsFacingRight ? _player.Bounds.Right : _player.Bounds.Left - reach;
-                _attackHitbox = new Rectangle(hitboxX, _player.Bounds.Y + 20, reach, 50);
-
-                if (isBottle) _player.IsStabbing = true;
-                else _player.IsAttacking = true;
-
-                if (_attackHitbox.Intersects(_dummy.Bounds))
+                else
                 {
-                    _dummy.Health -= _currentStrikeDamage;
-                    _dummy.ApplyHit(new Vector2(forceX, forceY), 0.3f);
-
-                    _shakeDuration = 0.1f;
-                    _shakeIntensity = 2f;
-
-                    if (_weaponManager.HeldWeaponIndex != -1) _weaponManager.ForceDestroyHeldWeapon();
-
-                    _isSwinging = false;
-                    _isPunching = false;
-                }
-
-                if (_swingTimer >= _currentSwingDuration)
-                {
-                    _isSwinging = false;
-                    _isPunching = false;
+                    if (!_player.IsGrounded) _player.IsSlamming = true;
+                    else _player.PerformAttack(WeaponDatabase.Unarmed, false);
                 }
             }
+            else if (InputManager.JustPressed(Keys.F) && _player.IsCarryingDummy && !_player.IsGrounded)
+            {
+                _player.IsSlamming = true;
+            }
 
+            // --- NEU: SAUBERE KOLLISIONSABFRAGE ---
+            if (_player.IsSwinging && _player.AttackHitbox.Intersects(_dummy.Bounds))
+            {
+                _dummy.Health -= _player.CurrentStrikeDamage;
+                _dummy.ApplyHit(_player.CurrentStrikeForce, 0.3f);
+
+                _shakeDuration = 0.1f;
+                _shakeIntensity = 2f;
+
+                if (_weaponManager.HeldWeaponIndex != -1) _weaponManager.ForceDestroyHeldWeapon();
+
+                _player.StopAttack();
+            }
+
+            // Kamera
             if (_shakeDuration > 0)
             {
                 _shakeDuration -= dt;
@@ -298,6 +227,20 @@ namespace Bar_Menace
             _weaponManager.Draw(_spriteBatch, _pixelTexture, _cameraOffset, _player);
             _dummy.Draw(_spriteBatch, _dummySprite, _cameraOffset);
             _player.Draw(_spriteBatch, _playerSprite, _cameraOffset);
+
+            // --- OPTIONAL: HITBOX ZEICHNEN (FÜR DEBUGGING) ---
+            /*
+            if (_player.IsSwinging)
+            {
+                Rectangle renderRect = new Rectangle(
+                    _player.AttackHitbox.X + (int)_cameraOffset.X, 
+                    _player.AttackHitbox.Y + (int)_cameraOffset.Y, 
+                    _player.AttackHitbox.Width, 
+                    _player.AttackHitbox.Height);
+                _spriteBatch.Draw(_pixelTexture, renderRect, Color.Red * 0.5f);
+            }
+            */
+
             _spriteBatch.End();
             base.Draw(gameTime);
         }

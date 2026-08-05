@@ -39,6 +39,15 @@ namespace Bar_Menace.Entities
         private const float FrameInterval = 0.15f;
         public float KnockbackTimer = 0f;
 
+        // --- NEU: KAMPF LOGIK ---
+        public bool IsSwinging { get; private set; } = false;
+        private float _swingTimer = 0f;
+        private float _currentSwingDuration = 0f;
+        public int CurrentStrikeDamage { get; private set; } = 0;
+        public Vector2 CurrentStrikeForce { get; private set; } = Vector2.Zero;
+        public Rectangle AttackHitbox { get; private set; }
+        private int _currentReach = 0;
+
         public Player(Vector2 startPosition)
         {
             Position = startPosition;
@@ -54,16 +63,57 @@ namespace Bar_Menace.Entities
             frameTimer = 0f;
         }
 
-        public void TriggerAttack()
+        // NEU: Diese Methode wird von Game1 aufgerufen, wenn man F drückt
+        public void PerformAttack(WeaponData data, bool isBottle)
         {
+            if (IsSwinging) return; // Wenn er schon schlägt, mach nichts
+
+            IsSwinging = true;
+            _swingTimer = 0f;
+
+            // Daten aus dem Waffensystem übernehmen
+            CurrentStrikeDamage = data.StrikeDamage;
+            CurrentStrikeForce = new Vector2(IsFacingRight ? data.StrikeForceX : -data.StrikeForceX, data.StrikeForceY);
+            _currentSwingDuration = data.SwingDuration;
+            _currentReach = data.HitboxReach;
+
+            if (isBottle) IsStabbing = true;
+            else IsAttacking = true;
+
             currentFrame = 0;
             frameTimer = 0f;
         }
 
-        // NEU: KeyboardStates wurden aus den Parametern entfernt!
+        // NEU: Wird aufgerufen, sobald der Dummy getroffen wurde
+        public void StopAttack()
+        {
+            IsSwinging = false;
+            IsAttacking = false;
+            IsStabbing = false;
+        }
+
         public void Update(float dt, List<Rectangle> platforms, int screenWidth, int screenHeight, float weaponWeight)
         {
             JustLandedSlam = false;
+
+            // --- NEU: KAMPF UPDATE IM SPIELER ---
+            if (IsSwinging)
+            {
+                _swingTimer += dt;
+
+                int hitboxX = IsFacingRight ? Bounds.Right : Bounds.Left - _currentReach;
+                AttackHitbox = new Rectangle(hitboxX, Bounds.Y + 20, _currentReach, 50);
+
+                if (_swingTimer >= _currentSwingDuration)
+                {
+                    StopAttack();
+                }
+            }
+            else
+            {
+                // Wenn er nicht schlägt, Hitbox aus dem Weg räumen
+                AttackHitbox = new Rectangle(-1000, -1000, 0, 0);
+            }
 
             if (ThrowTimer > 0) ThrowTimer -= dt;
 
@@ -103,7 +153,6 @@ namespace Bar_Menace.Entities
                     float speed = BaseMoveSpeed * weaponWeight;
                     Velocity.X = 0;
 
-                    // NEU: InputManager benutzt!
                     if (InputManager.IsHeld(Keys.A)) { Velocity.X = -speed; IsFacingRight = false; }
                     if (InputManager.IsHeld(Keys.D)) { Velocity.X = speed; IsFacingRight = true; }
                 }
@@ -124,7 +173,6 @@ namespace Bar_Menace.Entities
                 jumpCount = 0;
             }
 
-            // NEU: InputManager benutzt!
             if (InputManager.JustPressed(Keys.Space) && !IsSlamming && KnockbackTimer <= 0 && !IsKnockedDown && !IsHurt && !IsPickingUp)
             {
                 if (IsGrounded || jumpCount < MaxJumps)
@@ -175,7 +223,6 @@ namespace Bar_Menace.Entities
                 }
             }
 
-            // NEU: InputManager benutzt!
             bool wantsToDrop = InputManager.IsHeld(Keys.S);
             Rectangle footSensor = new Rectangle((int)Position.X, (int)Position.Y + 1, Width, Height);
 

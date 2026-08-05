@@ -89,12 +89,13 @@ namespace Bar_Menace.Entities
             Weapons[index] = w;
         }
 
-        public void Update(float dt, KeyboardState kState, KeyboardState oldKState, Player player, Dummy dummy, List<Rectangle> platforms, int screenWidth, int screenHeight, out bool triggerShake)
+        // NEU: KeyboardStates aus den Parametern entfernt!
+        public void Update(float dt, Player player, Dummy dummy, List<Rectangle> platforms, int screenWidth, int screenHeight, out bool triggerShake)
         {
             triggerShake = false;
 
-            // E: Aufheben / Fallenlassen
-            if (kState.IsKeyDown(Keys.E) && oldKState.IsKeyUp(Keys.E) && !player.IsSlamming && !player.IsCarryingDummy)
+            // NEU: InputManager
+            if (InputManager.JustPressed(Keys.E) && !player.IsSlamming && !player.IsCarryingDummy)
             {
                 if (HeldWeaponIndex == -1)
                 {
@@ -123,14 +124,13 @@ namespace Bar_Menace.Entities
                 }
             }
 
-            // Q: Werfen
-            if (kState.IsKeyDown(Keys.Q) && oldKState.IsKeyUp(Keys.Q) && HeldWeaponIndex != -1 && !player.IsSlamming)
+            // NEU: InputManager
+            if (InputManager.JustPressed(Keys.Q) && HeldWeaponIndex != -1 && !player.IsSlamming)
             {
                 WeaponItem w = Weapons[HeldWeaponIndex];
                 w.State = WeaponState.Thrown;
                 float throwDirection = player.IsFacingRight ? 1f : -1f;
 
-                // DATENBANK-ABFRAGE FÜR WURFGESCHWINDIGKEIT
                 WeaponData data = WeaponDatabase.Stats[w.Type];
                 w.Velocity = new Vector2(data.ThrowForceX * throwDirection, data.ThrowForceY);
 
@@ -171,10 +171,8 @@ namespace Bar_Menace.Entities
                     w.Position += w.Velocity * dt;
                     bool hitSurface = false;
 
-                    // Kollision mit dem Dummy bei Wurf
                     if (w.State == WeaponState.Thrown && w.BoundingBox.Intersects(dummy.Bounds))
                     {
-                        // DATENBANK-ABFRAGE FÜR WURFSCHADEN
                         WeaponData data = WeaponDatabase.Stats[w.Type];
                         dummy.Health -= data.ThrowDamage;
 
@@ -282,14 +280,10 @@ namespace Bar_Menace.Entities
                         Vector2 origin = weapon.Origin;
                         SpriteEffects effect = SpriteEffects.None;
 
-                        if (weapon.Type == WeaponType.Bottle)
-                        {
-                            scale = 1.8f;
-                        }
+                        if (weapon.Type == WeaponType.Bottle) scale = 1.8f;
                         else if (weapon.Type == WeaponType.BilliardCue)
                         {
                             scale = 0.15f;
-
                             if (weapon.State == WeaponState.Held)
                             {
                                 if (!player.IsFacingRight)
@@ -297,26 +291,12 @@ namespace Bar_Menace.Entities
                                     effect = SpriteEffects.FlipHorizontally;
                                     origin = new Vector2(weapon.CustomTexture.Width, weapon.CustomTexture.Height / 2f);
                                 }
-                                else
-                                {
-                                    origin = new Vector2(0, weapon.CustomTexture.Height / 2f);
-                                }
+                                else origin = new Vector2(0, weapon.CustomTexture.Height / 2f);
                             }
                         }
 
                         Vector2 centeredPos = new Vector2(drawPos.X + (weapon.BoundingBox.Width / 2f), drawPos.Y + (weapon.BoundingBox.Height / 2f));
-
-                        spriteBatch.Draw(
-                            weapon.CustomTexture,
-                            centeredPos,
-                            null,
-                            Color.White,
-                            weapon.Rotation,
-                            origin,
-                            scale,
-                            effect,
-                            0f
-                        );
+                        spriteBatch.Draw(weapon.CustomTexture, centeredPos, null, Color.White, weapon.Rotation, origin, scale, effect, 0f);
                     }
                     else
                     {

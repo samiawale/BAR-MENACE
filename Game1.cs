@@ -23,7 +23,6 @@ namespace Bar_Menace
         private Level _level;
         private WeaponManager _weaponManager;
 
-        private KeyboardState _oldKeyboardState;
         private Random _random;
 
         private bool _isSwinging = false;
@@ -74,14 +73,16 @@ namespace Bar_Menace
 
         protected override void Update(GameTime gameTime)
         {
-            KeyboardState kState = Keyboard.GetState();
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || kState.IsKeyDown(Keys.Escape)) Exit();
+            // NEU: InputManager aktualisieren! Muss jeden Frame ganz oben passieren.
+            InputManager.Update();
+
+            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || InputManager.JustPressed(Keys.Escape))
+                Exit();
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
             int screenWidth = GraphicsDevice.Viewport.Width;
             int screenHeight = GraphicsDevice.Viewport.Height;
 
-            // --- BEWEGUNGSGESCHWINDIGKEIT & GEWICHT ---
             float weaponWeight = WeaponDatabase.Unarmed.WeightMultiplier;
             _player.IsCarryingHeavy = WeaponDatabase.Unarmed.IsHeavy;
 
@@ -94,13 +95,14 @@ namespace Bar_Menace
             }
             if (_player.IsCarryingDummy) weaponWeight = 0.5f;
 
-            _player.Update(dt, kState, _oldKeyboardState, _level.Platforms, screenWidth, screenHeight, weaponWeight);
+            // NEU: Deutlich kürzere Parameterliste!
+            _player.Update(dt, _level.Platforms, screenWidth, screenHeight, weaponWeight);
 
             bool projectileTriggeredShake;
-            _weaponManager.Update(dt, kState, _oldKeyboardState, _player, _dummy, _level.Platforms, screenWidth, screenHeight, out projectileTriggeredShake);
+            // NEU: Deutlich kürzere Parameterliste!
+            _weaponManager.Update(dt, _player, _dummy, _level.Platforms, screenWidth, screenHeight, out projectileTriggeredShake);
             if (projectileTriggeredShake) { _shakeDuration = 0.15f; _shakeIntensity = 5f; }
 
-            // Dummy tragen Update
             if (_player.IsCarryingDummy)
             {
                 _dummy.IsCarried = true;
@@ -113,8 +115,8 @@ namespace Bar_Menace
 
             _dummy.Update(dt, screenWidth, screenHeight, _level.Platforms);
 
-            // E: Aufheben / Fallen lassen
-            if (kState.IsKeyDown(Keys.E) && _oldKeyboardState.IsKeyUp(Keys.E) && !_player.IsSlamming)
+            // NEU: InputManager
+            if (InputManager.JustPressed(Keys.E) && !_player.IsSlamming)
             {
                 if (_weaponManager.HeldWeaponIndex == -1 && !_player.IsCarryingDummy)
                 {
@@ -128,15 +130,14 @@ namespace Bar_Menace
                 }
             }
 
-            // Q: Werfen
-            if (kState.IsKeyDown(Keys.Q) && _oldKeyboardState.IsKeyUp(Keys.Q) && _player.IsCarryingDummy && !_player.IsSlamming)
+            // NEU: InputManager
+            if (InputManager.JustPressed(Keys.Q) && _player.IsCarryingDummy && !_player.IsSlamming)
             {
                 _player.IsCarryingDummy = false;
                 _dummy.Velocity = new Vector2(850f * (_player.IsFacingRight ? 1f : -1f), -400f);
                 _player.TriggerThrow();
             }
 
-            // Landung nach dem Slam
             if (_player.JustLandedSlam)
             {
                 if (_player.IsCarryingDummy)
@@ -182,15 +183,15 @@ namespace Bar_Menace
 
             _player.IsAttacking = false; _player.IsStabbing = false;
 
-            // --- ANGRIFFS LOGIK (F-TASTE) ---
-            if (kState.IsKeyDown(Keys.F) && _oldKeyboardState.IsKeyUp(Keys.F))
+            // NEU: InputManager
+            if (InputManager.JustPressed(Keys.F))
             {
                 if (_player.IsCarryingDummy && !_player.IsGrounded) _player.IsSlamming = true;
                 else if (!_player.IsCarryingDummy)
                 {
                     bool strikeTriggered = false;
 
-                    if (_weaponManager.HeldWeaponIndex != -1) // Mit Waffe
+                    if (_weaponManager.HeldWeaponIndex != -1)
                     {
                         WeaponItem currentWeapon = _weaponManager.Weapons[_weaponManager.HeldWeaponIndex];
                         WeaponData data = WeaponDatabase.Stats[currentWeapon.Type];
@@ -201,7 +202,6 @@ namespace Bar_Menace
                             _isSwinging = true;
                             _swingTimer = 0f;
 
-                            // Holt alle Werte direkt aus der Datenbank!
                             _currentStrikeDamage = data.StrikeDamage;
                             forceX = _player.IsFacingRight ? data.StrikeForceX : -data.StrikeForceX;
                             forceY = data.StrikeForceY;
@@ -213,7 +213,7 @@ namespace Bar_Menace
                             strikeTriggered = true;
                         }
                     }
-                    else if (!_isSwinging && !_isPunching) // Unbewaffnet (Faustschlag)
+                    else if (!_isSwinging && !_isPunching)
                     {
                         if (!_player.IsGrounded) _player.IsSlamming = true;
                         else
@@ -223,7 +223,6 @@ namespace Bar_Menace
                             _isPunching = true;
                             _swingTimer = 0f;
 
-                            // Holt Faust-Werte aus der Datenbank
                             _currentStrikeDamage = unarmedData.StrikeDamage;
                             _currentSwingDuration = unarmedData.SwingDuration;
                             forceX = _player.IsFacingRight ? unarmedData.StrikeForceX : -unarmedData.StrikeForceX;
@@ -238,12 +237,10 @@ namespace Bar_Menace
                 }
             }
 
-            // --- KONTINUIERLICHE HITBOX WÄHREND DEM SCHLAG ---
             if (_isSwinging || _isPunching)
             {
                 _swingTimer += dt;
 
-                // Reichweite aus der Datenbank holen
                 int reach = WeaponDatabase.Unarmed.HitboxReach;
                 bool isBottle = false;
 
@@ -260,7 +257,6 @@ namespace Bar_Menace
                 if (isBottle) _player.IsStabbing = true;
                 else _player.IsAttacking = true;
 
-                // Treffer abfragen
                 if (_attackHitbox.Intersects(_dummy.Bounds))
                 {
                     _dummy.Health -= _currentStrikeDamage;
@@ -282,7 +278,6 @@ namespace Bar_Menace
                 }
             }
 
-            // Kamera-Wackeln
             if (_shakeDuration > 0)
             {
                 _shakeDuration -= dt;
@@ -292,7 +287,6 @@ namespace Bar_Menace
             }
             else _cameraOffset = Vector2.Zero;
 
-            _oldKeyboardState = kState;
             base.Update(gameTime);
         }
 

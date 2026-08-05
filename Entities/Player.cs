@@ -54,14 +54,14 @@ namespace Bar_Menace.Entities
             frameTimer = 0f;
         }
 
-        // NEW: Fixes the punch flicker by starting it perfectly at frame 0
         public void TriggerAttack()
         {
             currentFrame = 0;
             frameTimer = 0f;
         }
 
-        public void Update(float dt, KeyboardState kState, KeyboardState oldKState, List<Rectangle> platforms, int screenWidth, int screenHeight, float weaponWeight)
+        // NEU: KeyboardStates wurden aus den Parametern entfernt!
+        public void Update(float dt, List<Rectangle> platforms, int screenWidth, int screenHeight, float weaponWeight)
         {
             JustLandedSlam = false;
 
@@ -102,8 +102,10 @@ namespace Bar_Menace.Entities
                 {
                     float speed = BaseMoveSpeed * weaponWeight;
                     Velocity.X = 0;
-                    if (kState.IsKeyDown(Keys.A)) { Velocity.X = -speed; IsFacingRight = false; }
-                    if (kState.IsKeyDown(Keys.D)) { Velocity.X = speed; IsFacingRight = true; }
+
+                    // NEU: InputManager benutzt!
+                    if (InputManager.IsHeld(Keys.A)) { Velocity.X = -speed; IsFacingRight = false; }
+                    if (InputManager.IsHeld(Keys.D)) { Velocity.X = speed; IsFacingRight = true; }
                 }
                 else if (SlamPhase == 3)
                 {
@@ -122,7 +124,8 @@ namespace Bar_Menace.Entities
                 jumpCount = 0;
             }
 
-            if (kState.IsKeyDown(Keys.Space) && oldKState.IsKeyUp(Keys.Space) && !IsSlamming && KnockbackTimer <= 0 && !IsKnockedDown && !IsHurt && !IsPickingUp)
+            // NEU: InputManager benutzt!
+            if (InputManager.JustPressed(Keys.Space) && !IsSlamming && KnockbackTimer <= 0 && !IsKnockedDown && !IsHurt && !IsPickingUp)
             {
                 if (IsGrounded || jumpCount < MaxJumps)
                 {
@@ -172,7 +175,8 @@ namespace Bar_Menace.Entities
                 }
             }
 
-            bool wantsToDrop = kState.IsKeyDown(Keys.S);
+            // NEU: InputManager benutzt!
+            bool wantsToDrop = InputManager.IsHeld(Keys.S);
             Rectangle footSensor = new Rectangle((int)Position.X, (int)Position.Y + 1, Width, Height);
 
             foreach (Rectangle platform in platforms)
@@ -193,10 +197,9 @@ namespace Bar_Menace.Entities
             frameTimer += dt;
             if (frameTimer >= FrameInterval)
             {
-                // NEW: If attacking, freeze on the last frame (frame 2) so it doesn't loop and flicker!
                 if ((IsAttacking || IsStabbing || ThrowTimer > 0) && currentFrame == 2)
                 {
-                    // Do nothing, hold the punch pose
+                    // Pose halten
                 }
                 else
                 {
